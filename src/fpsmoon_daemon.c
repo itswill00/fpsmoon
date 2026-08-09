@@ -232,19 +232,51 @@ static void get_gpu_stats(char *load_out, size_t load_len, char *freq_out, size_
     }
 
     // 3. Mali / Devfreq Fallback
-    if (!found_gpu_load) {
+    if (!found_gpu_load || strcmp(freq_out, "0MHz") == 0) {
         glob_t g_devfreq;
-        if (glob("/sys/class/devfreq/*gpu*/load", 0, NULL, &g_devfreq) == 0 && g_devfreq.gl_pathc > 0) {
-            read_file_string(g_devfreq.gl_pathv[0], buf, sizeof(buf));
-            if (buf[0]) {
-                int v = atoi(buf);
-                if (v >= 0) {
-                    if (v > 100) v = 100;
-                    snprintf(load_out, load_len, "%d", v);
-                    found_gpu_load = 1;
+        const char *gpu_load_patterns[] = {
+            "/sys/class/devfreq/*gpu*/load",
+            "/sys/class/devfreq/*mali*/load",
+            "/sys/devices/platform/*mali*/gpu_busy",
+            "/sys/devices/platform/soc/*mali*/gpu_busy",
+            NULL
+        };
+        for (int i = 0; !found_gpu_load && gpu_load_patterns[i] != NULL; i++) {
+            if (glob(gpu_load_patterns[i], 0, NULL, &g_devfreq) == 0) {
+                if (g_devfreq.gl_pathc > 0) {
+                    read_file_string(g_devfreq.gl_pathv[0], buf, sizeof(buf));
+                    if (buf[0]) {
+                        int v = atoi(buf);
+                        if (v >= 0) {
+                            if (v > 100) v = 100;
+                            snprintf(load_out, load_len, "%d", v);
+                            found_gpu_load = 1;
+                        }
+                    }
                 }
+                globfree(&g_devfreq);
             }
-            globfree(&g_devfreq);
+        }
+
+        const char *gpu_freq_patterns[] = {
+            "/sys/class/devfreq/*gpu*/cur_freq",
+            "/sys/class/devfreq/*mali*/cur_freq",
+            "/sys/devices/platform/*mali*/devfreq/*mali*/cur_freq",
+            "/sys/devices/platform/soc/*mali*/devfreq/*mali*/cur_freq",
+            NULL
+        };
+        for (int i = 0; (strcmp(freq_out, "0MHz") == 0 || strcmp(freq_out, "") == 0) && gpu_freq_patterns[i] != NULL; i++) {
+            if (glob(gpu_freq_patterns[i], 0, NULL, &g_devfreq) == 0) {
+                if (g_devfreq.gl_pathc > 0) {
+                    read_file_string(g_devfreq.gl_pathv[0], buf, sizeof(buf));
+                    if (buf[0]) {
+                        long hz = atol(buf);
+                        if (hz > 1000000) snprintf(freq_out, freq_len, "%ldMHz", hz / 1000000);
+                        else if (hz > 1000) snprintf(freq_out, freq_len, "%ldMHz", hz / 1000);
+                    }
+                }
+                globfree(&g_devfreq);
+            }
         }
     }
 
