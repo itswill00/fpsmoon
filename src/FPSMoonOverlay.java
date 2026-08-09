@@ -538,7 +538,7 @@ public class FPSMoonOverlay {
         String cTemp = stats.getOrDefault("cpu_temp", "--");
         String cLoad = stats.getOrDefault("cpu_load", "--");
         String cFreq = stats.getOrDefault("cpu_freq", "");
-        if (!cFreq.isEmpty() && !"--".equals(cFreq) && !"0.00GHz".equals(cFreq)) {
+        if (showCpuFreq && !cFreq.isEmpty() && !"--".equals(cFreq) && !"0.00GHz".equals(cFreq)) {
             cpuText = "CPU " + cTemp + "°C (" + cLoad + "%) " + cFreq;
         } else {
             cpuText = "CPU " + cTemp + "°C (" + cLoad + "%)";
@@ -549,7 +549,7 @@ public class FPSMoonOverlay {
         String gLoad = stats.getOrDefault("gpu_load", "--");
         String gTemp = stats.getOrDefault("gpu_temp", "--");
         String gFreq = stats.getOrDefault("gpu_freq", "");
-        if (!gFreq.isEmpty() && !"--".equals(gFreq) && !"0MHz".equals(gFreq)) {
+        if (showGpuFreq && !gFreq.isEmpty() && !"--".equals(gFreq) && !"0MHz".equals(gFreq)) {
             gpuText = "GPU " + gTemp + "°C (" + gLoad + "%) " + gFreq;
         } else {
             gpuText = "GPU " + gTemp + "°C (" + gLoad + "%)";
