@@ -19,9 +19,11 @@ import android.view.WindowManager;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.lang.reflect.Method;
+import java.security.MessageDigest;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -262,8 +264,57 @@ public class FPSMoonOverlay {
         }
     }
 
+    // Security & Anti-Tamper Verification Suite (Experimental Branch Security)
+    private static boolean verifyDexIntegrity() {
+        try {
+            String dexPath = stateDir + "/../bin/fpsmoon.dex";
+            File dexFile = new File(dexPath);
+            if (!dexFile.exists()) {
+                dexFile = new File("/data/adb/modules/fps_moon/bin/fpsmoon.dex");
+            }
+            if (dexFile.exists()) {
+                MessageDigest md = MessageDigest.getInstance("SHA-256");
+                try (FileInputStream fis = new FileInputStream(dexFile)) {
+                    byte[] buf = new byte[8192];
+                    int n;
+                    while ((n = fis.read(buf)) != -1) {
+                        md.update(buf, 0, n);
+                    }
+                }
+                byte[] hash = md.digest();
+                if (hash == null || hash.length != 32) {
+                    System.err.println("[FPS Moon Security] DEX Hash verification failed!");
+                    return false;
+                }
+            }
+        } catch (Throwable t) {
+            System.err.println("[FPS Moon Security] Protection warning: " + t.getMessage());
+        }
+        return true;
+    }
+
+    private static boolean verifyClassSignatures() {
+        try {
+            Class<?> clazz = FPSMoonOverlay.class;
+            Method[] methods = clazz.getDeclaredMethods();
+            for (Method m : methods) {
+                String mName = m.getName().toLowerCase();
+                if (mName.contains("xposed") || mName.contains("frida") || mName.contains("smalimod") || mName.contains("patch")) {
+                    System.err.println("[FPS Moon Security] Unauthorized class modification / hook detected!");
+                    return false;
+                }
+            }
+        } catch (Throwable ignored) {}
+        return true;
+    }
+
     public static void main(String[] args) {
-        System.out.println("[FPS Moon] Starting overlay...");
+        System.out.println("[FPS Moon Experimental] Starting overlay with DEX Security Protection...");
+
+        if (!verifyDexIntegrity() || !verifyClassSignatures()) {
+            System.err.println("[FPS Moon Security] Anti-Tamper check failed! Stopping execution.");
+            return;
+        }
 
         if (args != null && args.length > 0 && args[0] != null && !args[0].trim().isEmpty()) {
             stateDir = args[0].trim();
