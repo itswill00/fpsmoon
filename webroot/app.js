@@ -4,8 +4,10 @@ let stateConfig = {
     visible: true,
     show_fps: true,
     show_cpu: true,
+    show_cpu_freq: true,
     show_gov: false,
     show_gpu: true,
+    show_gpu_freq: true,
     show_gpu_gov: false,
     show_ram: false,
     show_zram: false,
@@ -207,8 +209,10 @@ function syncUiFromState() {
 
     document.getElementById("chkFps").checked = stateConfig.show_fps;
     document.getElementById("chkCpu").checked = stateConfig.show_cpu;
+    if (document.getElementById("chkCpuFreq")) document.getElementById("chkCpuFreq").checked = stateConfig.show_cpu_freq !== false;
     if (document.getElementById("chkGov")) document.getElementById("chkGov").checked = stateConfig.show_gov;
     document.getElementById("chkGpu").checked = stateConfig.show_gpu;
+    if (document.getElementById("chkGpuFreq")) document.getElementById("chkGpuFreq").checked = stateConfig.show_gpu_freq !== false;
     if (document.getElementById("chkGpuGov")) document.getElementById("chkGpuGov").checked = stateConfig.show_gpu_gov;
     document.getElementById("chkRam").checked = stateConfig.show_ram;
     document.getElementById("chkBattery").checked = stateConfig.show_battery;
@@ -245,8 +249,10 @@ function syncStateFromUi() {
     stateConfig.visible = document.getElementById("masterToggle").checked;
     stateConfig.show_fps = document.getElementById("chkFps").checked;
     stateConfig.show_cpu = document.getElementById("chkCpu").checked;
+    if (document.getElementById("chkCpuFreq")) stateConfig.show_cpu_freq = document.getElementById("chkCpuFreq").checked;
     if (document.getElementById("chkGov")) stateConfig.show_gov = document.getElementById("chkGov").checked;
     stateConfig.show_gpu = document.getElementById("chkGpu").checked;
+    if (document.getElementById("chkGpuFreq")) stateConfig.show_gpu_freq = document.getElementById("chkGpuFreq").checked;
     if (document.getElementById("chkGpuGov")) stateConfig.show_gpu_gov = document.getElementById("chkGpuGov").checked;
     stateConfig.show_ram = document.getElementById("chkRam").checked;
     stateConfig.show_battery = document.getElementById("chkBattery").checked;
@@ -285,7 +291,7 @@ function resetPositionQuick() {
 }
 
 function initEvents() {
-    const toggles = ["masterToggle", "chkFps", "chkCpu", "chkGov", "chkGpu", "chkGpuGov", "chkRam", "chkBattery", "chkNet"];
+    const toggles = ["masterToggle", "chkFps", "chkCpu", "chkCpuFreq", "chkGov", "chkGpu", "chkGpuFreq", "chkGpuGov", "chkRam", "chkBattery", "chkNet"];
     toggles.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener("change", () => saveConfig());

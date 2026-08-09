@@ -62,8 +62,10 @@ public class FPSMoonOverlay {
     // Metric Toggles
     private static boolean showFps = true;
     private static boolean showCpu = true;
+    private static boolean showCpuFreq = true;
     private static boolean showGov = false;
     private static boolean showGpu = true;
+    private static boolean showGpuFreq = true;
     private static boolean showGpuGov = false;
     private static boolean showRam = false;
     private static boolean showZram = false;
@@ -626,8 +628,10 @@ public class FPSMoonOverlay {
             isVisible = parseBool(content, "visible", isVisible);
             showFps = parseBool(content, "show_fps", showFps);
             showCpu = parseBool(content, "show_cpu", showCpu);
+            showCpuFreq = parseBool(content, "show_cpu_freq", showCpuFreq);
             showGov = parseBool(content, "show_gov", showGov);
             showGpu = parseBool(content, "show_gpu", showGpu);
+            showGpuFreq = parseBool(content, "show_gpu_freq", showGpuFreq);
             showGpuGov = parseBool(content, "show_gpu_gov", showGpuGov);
             showRam = parseBool(content, "show_ram", showRam);
             showZram = parseBool(content, "show_zram", showZram);
