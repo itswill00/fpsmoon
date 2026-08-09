@@ -411,7 +411,7 @@ public class FPSMoonOverlay {
     private static void createHudWindow() {
         hudView = new CanvasHudView(context);
 
-        if (posY < 160) posY = 250;
+        if (posY < 0) posY = 0;
 
         int[] dims = calcHudDimensions();
         int initialW = dims[0];
@@ -424,6 +424,7 @@ public class FPSMoonOverlay {
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                         | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                         | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                        | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
                         | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
                 PixelFormat.TRANSLUCENT
         );
@@ -450,10 +451,13 @@ public class FPSMoonOverlay {
                         int newY = initialY + (int) (event.getRawY() - initialTouchY);
 
                         DisplayMetrics dm = context.getResources().getDisplayMetrics();
+                        int screenW = dm.widthPixels;
+                        int screenH = dm.heightPixels;
+
                         if (newX < 0) newX = 0;
-                        if (newY < 160) newY = 160;  // unified boundary
-                        if (newX > dm.widthPixels - 50) newX = dm.widthPixels - 50;
-                        if (newY > dm.heightPixels - 50) newY = dm.heightPixels - 50;
+                        if (newY < 0) newY = 0;
+                        if (newX > screenW - 30) newX = screenW - 30;
+                        if (newY > screenH - 30) newY = screenH - 30;
 
                         if (Math.abs(newX - params.x) >= 2 || Math.abs(newY - params.y) >= 2) {
                             params.x = newX;
@@ -712,7 +716,8 @@ public class FPSMoonOverlay {
             String content = sb.toString();
             int newX = parseInt(content, "x", posX);
             int newY = parseInt(content, "y", posY);
-            if (newY < 160) newY = 250;  // unified boundary
+            if (newX < 0) newX = 0;
+            if (newY < 0) newY = 0;
             posX = newX;
             posY = newY;
         } catch (Exception ignored) {}
