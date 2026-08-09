@@ -587,6 +587,31 @@ public class FPSMoonOverlay {
             }
         }
 
+        // Ensure overlay stays within current screen bounds when rotating or loading position
+        int[] screenSize = getRealScreenSize();
+        int screenW = screenSize[0];
+        int screenH = screenSize[1];
+        int viewW = (hudView != null && hudView.getWidth() > 0) ? hudView.getWidth() : (params != null ? params.width : 200);
+        int viewH = (hudView != null && hudView.getHeight() > 0) ? hudView.getHeight() : (params != null ? params.height : 80);
+        int maxX = Math.max(0, screenW - Math.min(viewW, screenW / 2));
+        int maxY = Math.max(0, screenH - Math.min(viewH, screenH / 2));
+
+        if (params != null) {
+            boolean posAdjusted = false;
+            if (params.x > maxX) { params.x = maxX; posAdjusted = true; }
+            if (params.y > maxY) { params.y = maxY; posAdjusted = true; }
+            if (params.x < 0) { params.x = 0; posAdjusted = true; }
+            if (params.y < 0) { params.y = 0; posAdjusted = true; }
+
+            if (posAdjusted && windowManager != null && hudView != null) {
+                try {
+                    windowManager.updateViewLayout(hudView, params);
+                    posX = params.x;
+                    posY = params.y;
+                } catch (Exception ignored) {}
+            }
+        }
+
         Map<String, String> stats = readStats();
 
         if (!isVisible) {
