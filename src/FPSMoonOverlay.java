@@ -311,11 +311,6 @@ public class FPSMoonOverlay {
     public static void main(String[] args) {
         System.out.println("[FPS Moon Experimental] Starting overlay with DEX Security Protection...");
 
-        if (!verifyDexIntegrity() || !verifyClassSignatures()) {
-            System.err.println("[FPS Moon Security] Anti-Tamper check failed! Stopping execution.");
-            return;
-        }
-
         if (args != null && args.length > 0 && args[0] != null && !args[0].trim().isEmpty()) {
             stateDir = args[0].trim();
         } else {
@@ -328,6 +323,11 @@ public class FPSMoonOverlay {
         configPath = stateDir + "/config.json";
         posPath    = stateDir + "/position.json";
 
+        if (!verifyDexIntegrity() || !verifyClassSignatures()) {
+            System.err.println("[FPS Moon Security] Anti-Tamper check failed! Stopping execution.");
+            return;
+        }
+
         try {
             Looper.prepareMainLooper();
 
@@ -337,21 +337,55 @@ public class FPSMoonOverlay {
                 fontMapMethod.invoke(null);
             } catch (Throwable ignored) {}
 
-            Class<?> activityThreadClass = Class.forName("android.app.ActivityThread");
-            Method systemMainMethod = activityThreadClass.getMethod("systemMain");
-            Object activityThread = systemMainMethod.invoke(null);
-            Context sysContext = (Context) activityThreadClass.getMethod("getSystemContext").invoke(activityThread);
+            Context sysContext = null;
+            try {
+                Class<?> activityThreadClass = Class.forName("android.app.ActivityThread");
+                Method systemMainMethod = activityThreadClass.getMethod("systemMain");
+                Object activityThread = systemMainMethod.invoke(null);
+                sysContext = (Context) activityThreadClass.getMethod("getSystemContext").invoke(activityThread);
+            } catch (Throwable t) {
+                System.err.println("[FPS Moon Error] ActivityThread.systemMain failed: " + t.getMessage());
+            }
 
             if (sysContext == null) {
-                System.err.println("[FPS Moon] Unable to acquire system context.");
+                System.err.println("[FPS Moon ERROR] Unable to acquire system context. Stopping overlay.");
                 return;
             }
 
-            DisplayManager dm = (DisplayManager) sysContext.getSystemService(Context.DISPLAY_SERVICE);
-            Display defaultDisplay = dm.getDisplay(Display.DEFAULT_DISPLAY);
-            context = sysContext.createDisplayContext(defaultDisplay);
+            context = sysContext; // Primary context fallback
 
-            windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+            try {
+                DisplayManager dm = (DisplayManager) sysContext.getSystemService(Context.DISPLAY_SERVICE);
+                if (dm != null) {
+                    Display defaultDisplay = dm.getDisplay(Display.DEFAULT_DISPLAY);
+                    if (defaultDisplay != null) {
+                        Context displayCtx = sysContext.createDisplayContext(defaultDisplay);
+                        if (displayCtx != null) {
+                            context = displayCtx;
+                        }
+                    }
+                }
+            } catch (Throwable t) {
+                System.err.println("[FPS Moon Warning] DisplayContext fallback: " + t.getMessage());
+            }
+
+            try {
+                windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+            } catch (Throwable t) {
+                System.err.println("[FPS Moon Warning] Context WINDOW_SERVICE: " + t.getMessage());
+            }
+
+            if (windowManager == null) {
+                try {
+                    windowManager = (WindowManager) sysContext.getSystemService(Context.WINDOW_SERVICE);
+                } catch (Throwable ignored) {}
+            }
+
+            if (windowManager == null) {
+                System.err.println("[FPS Moon ERROR] Unable to acquire WindowManager service. Stopping overlay.");
+                return;
+            }
+
             handler = new Handler(Looper.getMainLooper());
 
             // Register Graceful WindowManager Surface Cleanup Shutdown Hook
