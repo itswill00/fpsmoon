@@ -27,7 +27,9 @@ if [ -f "$MODDIR/bin/fpsmoon_daemon" ]; then
 fi
 
 # 2. Restart Native C++ Dear ImGui Overlay Engine (detached)
-if [ -f "$MODDIR/bin/fpsmoon_imgui" ]; then
+if [ -f "$MODDIR/bin/fpsmoon_imgui_launcher.dex" ] && [ -f "$MODDIR/bin/libfpsmoon_imgui.so" ]; then
+    ( LD_LIBRARY_PATH="$MODDIR/bin:$LD_LIBRARY_PATH" CLASSPATH="$MODDIR/bin/fpsmoon_imgui_launcher.dex" app_process /system/bin com.fpsmoon.imgui.FPSMoonImGuiLauncher "$MODDIR/state" > "$MODDIR/state/imgui.log" 2>&1 & )
+elif [ -f "$MODDIR/bin/fpsmoon_imgui" ]; then
     ( "$MODDIR/bin/fpsmoon_imgui" "$MODDIR/state" > "$MODDIR/state/imgui.log" 2>&1 & )
 fi
 
@@ -39,7 +41,7 @@ for pid in $(pgrep -f "fpsmoon_daemon" 2>/dev/null); do
     chmod 000 "/proc/$pid/oom_score_adj" 2>/dev/null || true
 done
 
-for pid in $(pgrep -f "fpsmoon_imgui" 2>/dev/null); do
+for pid in $(pgrep -f "FPSMoonImGuiLauncher" 2>/dev/null); do
     echo -1000 > "/proc/$pid/oom_score_adj" 2>/dev/null || true
     chmod 000 "/proc/$pid/oom_score_adj" 2>/dev/null || true
 done
