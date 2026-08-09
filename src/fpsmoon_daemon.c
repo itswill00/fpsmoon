@@ -578,6 +578,19 @@ int main() {
             rename(tmp_path, stats_file);
         }
 
+        // Auto Keep-Alive Watchdog: Ensure Java Overlay is always active
+        static int watchdog_cnt = 0;
+        if (++watchdog_cnt >= 20) {
+            watchdog_cnt = 0;
+            if (system("pgrep -f com.fpsmoon.FPSMoonOverlay >/dev/null 2>&1") != 0) {
+                char respawn_cmd[1024];
+                snprintf(respawn_cmd, sizeof(respawn_cmd),
+                         "( CLASSPATH=\"%s/../bin/fpsmoon.dex\" app_process /system/bin com.fpsmoon.FPSMoonOverlay \"%s\" > \"%s/overlay.log\" 2>&1 & )",
+                         state_dir, state_dir, state_dir);
+                system(respawn_cmd);
+            }
+        }
+
         int interval_ms = get_refresh_interval();
         usleep(interval_ms * 1000);
     }

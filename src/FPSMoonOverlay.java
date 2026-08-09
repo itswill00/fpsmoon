@@ -560,9 +560,18 @@ public class FPSMoonOverlay {
             public void run() {
                 try {
                     updateHudData();
-                } catch (Throwable ignored) {}
-                int delay = Math.max(50, refreshInterval);
-                handler.postDelayed(this, delay);
+                } catch (Throwable t) {
+                    System.err.println("[FPS Moon] Recovered loop: " + t.getMessage());
+                } finally {
+                    try {
+                        int delay = Math.max(50, refreshInterval);
+                        handler.postDelayed(this, delay);
+                    } catch (Throwable t2) {
+                        try {
+                            handler.postDelayed(this, 250);
+                        } catch (Throwable ignored) {}
+                    }
+                }
             }
         }, Math.max(50, refreshInterval));
     }
