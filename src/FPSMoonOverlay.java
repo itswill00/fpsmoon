@@ -435,6 +435,7 @@ public class FPSMoonOverlay {
         hudView.setOnTouchListener(new View.OnTouchListener() {
             private int initialX, initialY;
             private float initialTouchX, initialTouchY;
+            private int cachedScreenW = 1080, cachedScreenH = 2400;
 
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -444,21 +445,20 @@ public class FPSMoonOverlay {
                         initialY = params.y;
                         initialTouchX = event.getRawX();
                         initialTouchY = event.getRawY();
+                        int[] screenSize = getRealScreenSize();
+                        cachedScreenW = screenSize[0];
+                        cachedScreenH = screenSize[1];
                         return true;
 
                     case MotionEvent.ACTION_MOVE:
                         int newX = initialX + (int) (event.getRawX() - initialTouchX);
                         int newY = initialY + (int) (event.getRawY() - initialTouchY);
 
-                        int[] screenSize = getRealScreenSize();
-                        int screenW = screenSize[0];
-                        int screenH = screenSize[1];
-
                         int viewW = v.getWidth() > 0 ? v.getWidth() : params.width;
                         int viewH = v.getHeight() > 0 ? v.getHeight() : params.height;
 
-                        int maxX = Math.max(0, screenW - Math.min(viewW, screenW / 2));
-                        int maxY = Math.max(0, screenH - Math.min(viewH, screenH / 2));
+                        int maxX = Math.max(0, cachedScreenW - Math.min(viewW, cachedScreenW / 2));
+                        int maxY = Math.max(0, cachedScreenH - Math.min(viewH, cachedScreenH / 2));
 
                         if (newX < 0) newX = 0;
                         if (newY < 0) newY = 0;

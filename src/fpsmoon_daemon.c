@@ -23,15 +23,17 @@ static char cached_hz[32] = "60Hz";
 
 static void read_file_string(const char *path, char *buf, size_t max_len) {
     buf[0] = '\0';
-    FILE *f = fopen(path, "r");
-    if (!f) return;
-    if (fgets(buf, (int)max_len, f)) {
+    int fd = open(path, O_RDONLY | O_CLOEXEC);
+    if (fd < 0) return;
+    ssize_t n = read(fd, buf, max_len - 1);
+    close(fd);
+    if (n > 0) {
+        buf[n] = '\0';
         char *p = strchr(buf, '\n');
         if (p) *p = '\0';
         p = strchr(buf, '\r');
         if (p) *p = '\0';
     }
-    fclose(f);
 }
 
 static void get_cpu_temp(char *out, size_t max_len) {
