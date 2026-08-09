@@ -31,6 +31,11 @@ if [ -f "$MODDIR/bin/fpsmoon.dex" ]; then
     ( CLASSPATH="$MODDIR/bin/fpsmoon.dex" app_process /system/bin com.fpsmoon.FPSMoonOverlay "$MODDIR/state" > "$MODDIR/state/overlay.log" 2>&1 & )
 fi
 
+# 3. Restart Native ImGui Overlay Engine (if present)
+if [ -f "$MODDIR/bin/fpsmoon_imgui" ]; then
+    ( "$MODDIR/bin/fpsmoon_imgui" "$MODDIR/state" > "$MODDIR/state/imgui.log" 2>&1 & )
+fi
+
 sleep 1
 
 # Protect processes from Android LMK (Low Memory Killer) & Phantom Process Killer
@@ -40,6 +45,11 @@ for pid in $(pgrep -f "fpsmoon_daemon" 2>/dev/null); do
 done
 
 for pid in $(pgrep -f "com.fpsmoon.FPSMoonOverlay" 2>/dev/null); do
+    echo -1000 > "/proc/$pid/oom_score_adj" 2>/dev/null || true
+    chmod 000 "/proc/$pid/oom_score_adj" 2>/dev/null || true
+done
+
+for pid in $(pgrep -f "fpsmoon_imgui" 2>/dev/null); do
     echo -1000 > "/proc/$pid/oom_score_adj" 2>/dev/null || true
     chmod 000 "/proc/$pid/oom_score_adj" 2>/dev/null || true
 done
