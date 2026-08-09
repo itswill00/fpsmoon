@@ -624,10 +624,15 @@ public class FPSMoonOverlay {
             }
         } catch (Throwable ignored) {}
 
-        if (context != null) {
-            DisplayMetrics dm = context.getResources().getDisplayMetrics();
-            return new int[]{ dm.widthPixels, dm.heightPixels };
-        }
+        try {
+            if (context != null && context.getResources() != null) {
+                DisplayMetrics dm = context.getResources().getDisplayMetrics();
+                if (dm != null) {
+                    return new int[]{ dm.widthPixels, dm.heightPixels };
+                }
+            }
+        } catch (Throwable ignored) {}
+
         return new int[]{ 1080, 2400 };
     }
 
@@ -644,7 +649,17 @@ public class FPSMoonOverlay {
                 }
             }
         } catch (Throwable ignored) {}
-        return Math.round(dp * context.getResources().getDisplayMetrics().density);
+
+        try {
+            if (context.getResources() != null) {
+                DisplayMetrics dm = context.getResources().getDisplayMetrics();
+                if (dm != null) {
+                    return Math.round(dp * dm.density);
+                }
+            }
+        } catch (Throwable ignored) {}
+
+        return Math.round(dp * 2.5f);
     }
 
     private static int spToPx(float sp) {
@@ -660,7 +675,17 @@ public class FPSMoonOverlay {
                 }
             }
         } catch (Throwable ignored) {}
-        return Math.round(sp * context.getResources().getDisplayMetrics().scaledDensity);
+
+        try {
+            if (context.getResources() != null) {
+                DisplayMetrics dm = context.getResources().getDisplayMetrics();
+                if (dm != null) {
+                    return Math.round(sp * dm.scaledDensity);
+                }
+            }
+        } catch (Throwable ignored) {}
+
+        return Math.round(sp * 2.5f);
     }
 
     private static void startLoop() {
