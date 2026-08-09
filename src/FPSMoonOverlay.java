@@ -450,14 +450,20 @@ public class FPSMoonOverlay {
                         int newX = initialX + (int) (event.getRawX() - initialTouchX);
                         int newY = initialY + (int) (event.getRawY() - initialTouchY);
 
-                        DisplayMetrics dm = context.getResources().getDisplayMetrics();
-                        int screenW = dm.widthPixels;
-                        int screenH = dm.heightPixels;
+                        int[] screenSize = getRealScreenSize();
+                        int screenW = screenSize[0];
+                        int screenH = screenSize[1];
+
+                        int viewW = v.getWidth() > 0 ? v.getWidth() : params.width;
+                        int viewH = v.getHeight() > 0 ? v.getHeight() : params.height;
+
+                        int maxX = Math.max(0, screenW - Math.min(viewW, screenW / 2));
+                        int maxY = Math.max(0, screenH - Math.min(viewH, screenH / 2));
 
                         if (newX < 0) newX = 0;
                         if (newY < 0) newY = 0;
-                        if (newX > screenW - 30) newX = screenW - 30;
-                        if (newY > screenH - 30) newY = screenH - 30;
+                        if (newX > maxX) newX = maxX;
+                        if (newY > maxY) newY = maxY;
 
                         if (Math.abs(newX - params.x) >= 2 || Math.abs(newY - params.y) >= 2) {
                             params.x = newX;
@@ -494,11 +500,57 @@ public class FPSMoonOverlay {
         }
     }
 
+    private static int[] getRealScreenSize() {
+        try {
+            if (context != null) {
+                DisplayManager dm = (DisplayManager) context.getSystemService(Context.DISPLAY_SERVICE);
+                if (dm != null) {
+                    Display display = dm.getDisplay(Display.DEFAULT_DISPLAY);
+                    if (display != null) {
+                        DisplayMetrics realMetrics = new DisplayMetrics();
+                        display.getRealMetrics(realMetrics);
+                        return new int[]{ realMetrics.widthPixels, realMetrics.heightPixels };
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+
+        if (context != null) {
+            DisplayMetrics dm = context.getResources().getDisplayMetrics();
+            return new int[]{ dm.widthPixels, dm.heightPixels };
+        }
+        return new int[]{ 1080, 2400 };
+    }
+
     private static int dpToPx(int dp) {
+        if (context == null) return Math.round(dp * 2.5f);
+        try {
+            DisplayManager dm = (DisplayManager) context.getSystemService(Context.DISPLAY_SERVICE);
+            if (dm != null) {
+                Display display = dm.getDisplay(Display.DEFAULT_DISPLAY);
+                if (display != null) {
+                    DisplayMetrics realMetrics = new DisplayMetrics();
+                    display.getRealMetrics(realMetrics);
+                    return Math.round(dp * realMetrics.density);
+                }
+            }
+        } catch (Throwable ignored) {}
         return Math.round(dp * context.getResources().getDisplayMetrics().density);
     }
 
     private static int spToPx(float sp) {
+        if (context == null) return Math.round(sp * 2.5f);
+        try {
+            DisplayManager dm = (DisplayManager) context.getSystemService(Context.DISPLAY_SERVICE);
+            if (dm != null) {
+                Display display = dm.getDisplay(Display.DEFAULT_DISPLAY);
+                if (display != null) {
+                    DisplayMetrics realMetrics = new DisplayMetrics();
+                    display.getRealMetrics(realMetrics);
+                    return Math.round(sp * realMetrics.scaledDensity);
+                }
+            }
+        } catch (Throwable ignored) {}
         return Math.round(sp * context.getResources().getDisplayMetrics().scaledDensity);
     }
 
