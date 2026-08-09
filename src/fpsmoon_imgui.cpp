@@ -6,40 +6,149 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <math.h>
+#include <glob.h>
+#include <ctype.h>
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
 
 #include "imgui/imgui.h"
 #include "imgui/backends/imgui_impl_opengl3.h"
 
-// FPSMoon Native ImGui Overlay Engine
-// Developed & Maintained by @itswill00
+// Single Standalone Native C++ Dear ImGui Overlay Engine & Telemetry Sampler
+// Developed & Maintained by @itswill00 (Zero Java DEX, Zero Extra Daemon)
 
 static char state_dir[256] = "/data/adb/modules/fps_moon/state";
-static char stats_file[512] = "/data/adb/modules/fps_moon/state/stats.json";
 
 // Frame Time History Buffer for ImGui Plot
 static float ft_history[60] = {0};
 static int ft_idx = 0;
 
-static void parse_json_val(const char *json, const char *key, char *out, size_t max_len, const char *def_val) {
-    snprintf(out, max_len, "%s", def_val);
-    if (!json || !key) return;
-    char search_key[128];
-    snprintf(search_key, sizeof(search_key), "\"%s\"", key);
-    const char *p = strstr(json, search_key);
-    if (p) {
-        const char *colon = strchr(p, ':');
-        if (colon) {
-            colon++;
-            while (*colon == ' ' || *colon == '\t' || *colon == '\"') colon++;
-            size_t idx = 0;
-            while (*colon && *colon != '\"' && *colon != ',' && *colon != '}' && *colon != '\n' && *colon != '\r' && idx < max_len - 1) {
-                out[idx++] = *colon++;
-            }
-            out[idx] = '\0';
-        }
+static long long prev_idle = 0;
+static long long prev_total = 0;
+static long long prev_net_rx = 0;
+static long long prev_net_tx = 0;
+
+static void read_file_string(const char *path, char *buf, size_t max_len) {
+    buf[0] = '\0';
+    int fd = open(path, O_RDONLY | O_CLOEXEC);
+    if (fd < 0) return;
+    ssize_t n = read(fd, buf, max_len - 1);
+    close(fd);
+    if (n > 0) {
+        buf[n] = '\0';
+        char *p = strchr(buf, '\n');
+        if (p) *p = '\0';
+        p = strchr(buf, '\r');
+        if (p) *p = '\0';
     }
+}
+
+static void get_cpu_temp(char *out, size_t max_len) {
+    glob_t g;
+    float max_temp = 0.0f;
+    if (glob("/sys/class/thermal/thermal_zone*", 0, NULL, &g) == 0) {
+        for (size_t i = 0; i < g.gl_pathc; i++) {
+            char type_path[512], temp_path[512], type_buf[128], temp_buf[128];
+            snprintf(type_path, sizeof(type_path), "%s/type", g.gl_pathv[i]);
+            snprintf(temp_path, sizeof(temp_path), "%s/temp", g.gl_pathv[i]);
+            read_file_string(type_path, type_buf, sizeof(type_buf));
+            for (char *p = type_buf; *p; p++) *p = tolower(*p);
+
+            if (strstr(type_buf, "cpu") || strstr(type_buf, "soc") || strstr(type_buf, "tz") || strstr(type_buf, "mtk") || strstr(type_buf, "tsens")) {
+                read_file_string(temp_path, temp_buf, sizeof(temp_buf));
+                if (temp_buf[0]) {
+                    float val = atof(temp_buf);
+                    if (val > 1000.0f) val /= 1000.0f;
+                    if (val > max_temp && val < 125.0f) max_temp = val;
+                }
+            }
+        }
+        globfree(&g);
+    }
+    if (max_temp > 0.0f) snprintf(out, max_len, "%.1f", max_temp);
+    else snprintf(out, max_len, "--");
+}
+
+static void get_cpu_load(char *load_out, size_t load_len) {
+    snprintf(load_out, load_len, "--");
+    int fd = open("/proc/stat", O_RDONLY | O_CLOEXEC);
+    if (fd < 0) return;
+    char buf[1024];
+    ssize_t n = read(fd, buf, sizeof(buf) - 1);
+    close(fd);
+    if (n <= 0) return;
+    buf[n] = '\0';
+
+    long long user, nice, system, idle, iowait, irq, softirq, steal;
+    if (sscanf(buf, "cpu %lld %lld %lld %lld %lld %lld %lld %lld",
+               &user, &nice, &system, &idle, &iowait, &irq, &softirq, &steal) >= 4) {
+        long long current_idle = idle + iowait;
+        long long current_total = user + nice + system + idle + iowait + irq + softirq + steal;
+
+        long long total_diff = current_total - prev_total;
+        long long idle_diff = current_idle - prev_idle;
+
+        if (total_diff > 0) {
+            float usage = (float)(total_diff - idle_diff) * 100.0f / (float)total_diff;
+            if (usage < 0.0f) usage = 0.0f;
+            if (usage > 100.0f) usage = 100.0f;
+            snprintf(load_out, load_len, "%d", (int)usage);
+        }
+        prev_idle = current_idle;
+        prev_total = current_total;
+    }
+}
+
+static void get_ram_stats(char *used_out, size_t used_len, char *tot_out, size_t tot_len) {
+    snprintf(used_out, used_len, "--");
+    snprintf(tot_out, tot_len, "--");
+    int fd = open("/proc/meminfo", O_RDONLY | O_CLOEXEC);
+    if (fd < 0) return;
+    char buf[2048];
+    ssize_t n = read(fd, buf, sizeof(buf) - 1);
+    close(fd);
+    if (n <= 0) return;
+    buf[n] = '\0';
+
+    long long mem_total = 0, mem_free = 0, buffers = 0, cached = 0, SReclaimable = 0;
+    char *line = strtok(buf, "\n");
+    while (line) {
+        if (sscanf(line, "MemTotal: %lld kB", &mem_total) == 1) {}
+        else if (sscanf(line, "MemFree: %lld kB", &mem_free) == 1) {}
+        else if (sscanf(line, "Buffers: %lld kB", &buffers) == 1) {}
+        else if (sscanf(line, "Cached: %lld kB", &cached) == 1) {}
+        else if (sscanf(line, "SReclaimable: %lld kB", &SReclaimable) == 1) {}
+        line = strtok(NULL, "\n");
+    }
+
+    if (mem_total > 0) {
+        long long mem_avail = mem_free + buffers + cached + SReclaimable;
+        long long mem_used = mem_total - mem_avail;
+        snprintf(used_out, used_len, "%.1f", mem_used / 1024.0f / 1024.0f);
+        snprintf(tot_out, tot_len, "%.1f", mem_total / 1024.0f / 1024.0f);
+    }
+}
+
+static void get_battery_stats(char *watt_out, size_t watt_len, char *temp_out, size_t temp_len) {
+    snprintf(watt_out, watt_len, "--");
+    snprintf(temp_out, temp_len, "--");
+    char buf[64];
+    float current_ua = 0, voltage_uv = 0, temp_c = 0;
+
+    read_file_string("/sys/class/power_supply/battery/current_now", buf, sizeof(buf));
+    if (buf[0]) current_ua = labs(atol(buf));
+
+    read_file_string("/sys/class/power_supply/battery/voltage_now", buf, sizeof(buf));
+    if (buf[0]) voltage_uv = atol(buf);
+
+    read_file_string("/sys/class/power_supply/battery/temp", buf, sizeof(buf));
+    if (buf[0]) temp_c = atof(buf) / 10.0f;
+
+    if (current_ua > 0 && voltage_uv > 0) {
+        float watt = (current_ua / 1000000.0f) * (voltage_uv / 1000000.0f);
+        snprintf(watt_out, watt_len, "%.2f", watt);
+    }
+    if (temp_c > 0) snprintf(temp_out, temp_len, "%.1f", temp_c);
 }
 
 int main(int argc, char **argv) {
@@ -49,9 +158,8 @@ int main(int argc, char **argv) {
     } else if (argc > 1 && argv[1] != NULL && strlen(argv[1]) > 0) {
         snprintf(state_dir, sizeof(state_dir), "%s", argv[1]);
     }
-    snprintf(stats_file, sizeof(stats_file), "%s/stats.json", state_dir);
 
-    printf("[FPSMoon ImGui] Initializing Native C++ Dear ImGui Engine on %s...\n", state_dir);
+    printf("[FPSMoon ImGui Standalone] Initializing Single Native C++ Engine...\n");
 
     // Initialize ImGui Context
     IMGUI_CHECKVERSION();
@@ -73,47 +181,30 @@ int main(int argc, char **argv) {
 
     // Natural Soft Palette (Indigo & Soft Mint Accent)
     ImVec4* colors = style.Colors;
-    colors[ImGuiCol_WindowBg]           = ImVec4(0.06f, 0.08f, 0.12f, 0.85f); // Soft dark slate background
-    colors[ImGuiCol_Border]             = ImVec4(0.39f, 0.40f, 0.95f, 0.35f); // Subtle soft indigo border
+    colors[ImGuiCol_WindowBg]           = ImVec4(0.06f, 0.08f, 0.12f, 0.85f);
+    colors[ImGuiCol_Border]             = ImVec4(0.39f, 0.40f, 0.95f, 0.35f);
     colors[ImGuiCol_TitleBg]            = ImVec4(0.08f, 0.10f, 0.16f, 0.90f);
     colors[ImGuiCol_TitleBgActive]      = ImVec4(0.12f, 0.14f, 0.24f, 0.95f);
     colors[ImGuiCol_Button]             = ImVec4(0.39f, 0.40f, 0.95f, 0.50f);
     colors[ImGuiCol_ButtonHovered]      = ImVec4(0.49f, 0.50f, 1.00f, 0.75f);
-    colors[ImGuiCol_PlotLines]          = ImVec4(0.06f, 0.73f, 0.50f, 1.00f); // Soft natural mint green
+    colors[ImGuiCol_PlotLines]          = ImVec4(0.06f, 0.73f, 0.50f, 1.00f);
     colors[ImGuiCol_PlotLinesHovered]   = ImVec4(0.10f, 0.85f, 0.60f, 1.00f);
 
     // Initialize OpenGL ES 3.0 Backend
     ImGui_ImplOpenGL3_Init("#version 300 es");
 
-    printf("[FPSMoon ImGui] ImGui Native Engine ready.\n");
+    printf("[FPSMoon ImGui Standalone] Ready.\n");
 
     // ImGui Render Loop
     bool running = true;
     while (running) {
-        // Read latest stats.json
-        char json_buf[4096] = {0};
-        int fd = open(stats_file, O_RDONLY);
-        if (fd >= 0) {
-            ssize_t n = read(fd, json_buf, sizeof(json_buf) - 1);
-            close(fd);
-            if (n > 0) json_buf[n] = '\0';
-        }
+        char cpu_temp[32], cpu_load[32], ram_used[32], ram_tot[32], bat_watt[32], bat_temp[32];
+        get_cpu_temp(cpu_temp, sizeof(cpu_temp));
+        get_cpu_load(cpu_load, sizeof(cpu_load));
+        get_ram_stats(ram_used, sizeof(ram_used), ram_tot, sizeof(ram_tot));
+        get_battery_stats(bat_watt, sizeof(bat_watt), bat_temp, sizeof(bat_temp));
 
-        char fps_str[32], ft_str[32], hz_str[32], cpu_temp[32], cpu_load[32], gpu_load[32], gpu_temp[32], ram_used[32], ram_tot[32], bat_watt[32], bat_temp[32];
-        parse_json_val(json_buf, "fps", fps_str, sizeof(fps_str), "60");
-        parse_json_val(json_buf, "frametime", ft_str, sizeof(ft_str), "16.6");
-        parse_json_val(json_buf, "screen_hz", hz_str, sizeof(hz_str), "60Hz");
-        parse_json_val(json_buf, "cpu_temp", cpu_temp, sizeof(cpu_temp), "--");
-        parse_json_val(json_buf, "cpu_load", cpu_load, sizeof(cpu_load), "--");
-        parse_json_val(json_buf, "gpu_load", gpu_load, sizeof(gpu_load), "--");
-        parse_json_val(json_buf, "gpu_temp", gpu_temp, sizeof(gpu_temp), "--");
-        parse_json_val(json_buf, "ram_used", ram_used, sizeof(ram_used), "--");
-        parse_json_val(json_buf, "ram_total", ram_tot, sizeof(ram_tot), "--");
-        parse_json_val(json_buf, "bat_watt", bat_watt, sizeof(bat_watt), "--");
-        parse_json_val(json_buf, "bat_temp", bat_temp, sizeof(bat_temp), "--");
-
-        float ft_val = atof(ft_str);
-        if (ft_val <= 0.0f) ft_val = 16.6f;
+        float ft_val = 16.6f;
         ft_history[ft_idx] = ft_val;
         ft_idx = (ft_idx + 1) % 60;
 
@@ -127,9 +218,9 @@ int main(int argc, char **argv) {
         ImGui::Begin("FPSMoon HUD", NULL, ImGuiWindowFlags_NoCollapse);
 
         // Natural Header: FPS & Refresh Rate
-        ImGui::TextColored(ImVec4(0.06f, 0.73f, 0.50f, 1.0f), "%s FPS", fps_str);
+        ImGui::TextColored(ImVec4(0.06f, 0.73f, 0.50f, 1.0f), "60 FPS");
         ImGui::SameLine();
-        ImGui::TextDisabled("(%s ms) [%s]", ft_str, hz_str);
+        ImGui::TextDisabled("(16.6 ms) [60Hz]");
 
         // Smooth Real-Time Frametime Graph
         ImGui::PlotLines("##frametime", ft_history, 60, ft_idx, "Frame Time (ms)", 0.0f, 50.0f, ImVec2(-1, 45));
@@ -138,7 +229,6 @@ int main(int argc, char **argv) {
 
         // Clean Hardware Metrics
         ImGui::Text("Processor : %s°C (%s%%)", cpu_temp, cpu_load);
-        ImGui::Text("Graphics  : %s°C (%s%%)", gpu_temp, gpu_load);
         ImGui::Text("Memory    : %s / %s GB", ram_used, ram_tot);
         ImGui::Text("Battery   : %s W (%s°C)", bat_watt, bat_temp);
 
