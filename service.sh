@@ -9,6 +9,14 @@ sleep 3
 
 mkdir -p "$MODDIR/state"
 chmod 777 "$MODDIR/state"
+chcon -R u:object_r:system_file:s0 "$MODDIR/state" 2>/dev/null || true
+
+# Grant SYSTEM_ALERT_WINDOW AppOps permission across OEMs (MIUI/HyperOS/ColorOS/OneUI)
+appops set com.android.shell SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
+cmd appops set com.android.shell SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
+pm grant com.android.shell android.permission.SYSTEM_ALERT_WINDOW 2>/dev/null || true
+appops set android SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
+cmd appops set android SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
 
 # Kill any stale instances
 pkill -f "fpsmoon_daemon" 2>/dev/null

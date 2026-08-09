@@ -544,14 +544,34 @@ public class FPSMoonOverlay {
             }
         });
 
-        int[] windowTypes = new int[]{ 2038, 2034, 2015, 2003, 2002 };
+        int[] windowTypes = new int[]{
+            2038, // TYPE_APPLICATION_OVERLAY
+            2034, // TYPE_SYSTEM_NOTIFICATION
+            2032, // TYPE_ACCESSIBILITY_OVERLAY
+            2015, // TYPE_SPLIT_SCREEN_DIVIDER
+            2014, // TYPE_STATUS_BAR_PANEL
+            2010, // TYPE_SYSTEM_ERROR
+            2006, // TYPE_SYSTEM_OVERLAY
+            2003, // TYPE_SYSTEM_ALERT
+            2002, // TYPE_PHONE
+            2000  // TYPE_BASE_APPLICATION
+        };
+
+        boolean attached = false;
         for (int type : windowTypes) {
             try {
                 params.type = type;
                 windowManager.addView(hudView, params);
-                System.out.println("[FPS Moon] Attached to layer " + type);
+                System.out.println("[FPS Moon] Successfully attached to WindowManager layer " + type);
+                attached = true;
                 break;
-            } catch (Exception ignored) {}
+            } catch (Throwable t) {
+                System.err.println("[FPS Moon Warning] Failed layer " + type + ": " + t.getMessage());
+            }
+        }
+
+        if (!attached) {
+            System.err.println("[FPS Moon ERROR] Unable to attach overlay to any WindowManager layer!");
         }
     }
 
@@ -830,6 +850,7 @@ public class FPSMoonOverlay {
         String val = getJsonRawVal(json, key);
         if (val != null) {
             try {
+                val = val.replace(',', '.');
                 return Float.parseFloat(val);
             } catch (Exception ignored) {}
         }
@@ -840,6 +861,7 @@ public class FPSMoonOverlay {
         String val = getJsonRawVal(json, key);
         if (val != null) {
             try {
+                val = val.replace(',', '.');
                 return Math.round(Float.parseFloat(val));
             } catch (Exception ignored) {}
         }
