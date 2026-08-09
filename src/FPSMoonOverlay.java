@@ -41,6 +41,7 @@ public class FPSMoonOverlay {
     private static String posPath    = stateDir + "/position.json";
 
     // Layout State Variables
+    private static volatile boolean isDragging = false;
     private static int posX = 60;
     private static int posY = 250;
     private static float scale = 1.0f;
@@ -441,6 +442,7 @@ public class FPSMoonOverlay {
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
+                        isDragging = true;
                         initialX = params.x;
                         initialY = params.y;
                         initialTouchX = event.getRawX();
@@ -474,7 +476,9 @@ public class FPSMoonOverlay {
                         }
                         return true;
 
+                    case MotionEvent.ACTION_CANCEL:
                     case MotionEvent.ACTION_UP:
+                        isDragging = false;
                         posX = params.x;
                         posY = params.y;
                         handler.post(new Runnable() {
@@ -596,7 +600,7 @@ public class FPSMoonOverlay {
         int maxX = Math.max(0, screenW - Math.min(viewW, screenW / 2));
         int maxY = Math.max(0, screenH - Math.min(viewH, screenH / 2));
 
-        if (params != null) {
+        if (!isDragging && params != null) {
             boolean posAdjusted = false;
             if (params.x > maxX) { params.x = maxX; posAdjusted = true; }
             if (params.y > maxY) { params.y = maxY; posAdjusted = true; }
@@ -810,8 +814,12 @@ public class FPSMoonOverlay {
     }
 
     private static void savePosition() {
-        try (FileWriter fw = new FileWriter(posPath)) {
+        File tmpFile = new File(posPath + ".tmp");
+        File targetFile = new File(posPath);
+        try (FileWriter fw = new FileWriter(tmpFile)) {
             fw.write("{\n  \"x\": " + posX + ",\n  \"y\": " + posY + "\n}\n");
+            fw.flush();
+            tmpFile.renameTo(targetFile);
         } catch (Exception ignored) {}
     }
 }
