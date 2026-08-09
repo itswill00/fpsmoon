@@ -710,6 +710,30 @@ public class FPSMoonOverlay {
         }, Math.max(50, refreshInterval));
     }
 
+    private static String getDynamicScreenHz() {
+        try {
+            if (context != null) {
+                DisplayManager dm = (DisplayManager) context.getSystemService(Context.DISPLAY_SERVICE);
+                if (dm != null) {
+                    Display display = dm.getDisplay(Display.DEFAULT_DISPLAY);
+                    if (display != null) {
+                        float refreshRate = display.getRefreshRate();
+                        if (refreshRate <= 0) {
+                            Display.Mode mode = display.getMode();
+                            if (mode != null) {
+                                refreshRate = mode.getRefreshRate();
+                            }
+                        }
+                        if (refreshRate > 0) {
+                            return Math.round(refreshRate) + "Hz";
+                        }
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+        return null;
+    }
+
     private static void updateHudData() {
         // Instant config sync when config file is modified
         File cfgFile = new File(configPath);
@@ -757,7 +781,13 @@ public class FPSMoonOverlay {
 
         fpsText = stats.getOrDefault("fps", "60");
         ftText  = stats.getOrDefault("frametime", "16.6");
-        hzText  = stats.getOrDefault("screen_hz", "60Hz");
+
+        String hwHz = getDynamicScreenHz();
+        if (hwHz != null && !hwHz.isEmpty()) {
+            hzText = hwHz;
+        } else {
+            hzText = stats.getOrDefault("screen_hz", "60Hz");
+        }
 
         String cTemp = stats.getOrDefault("cpu_temp", "--");
         String cLoad = stats.getOrDefault("cpu_load", "--");

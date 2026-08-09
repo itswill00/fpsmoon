@@ -414,18 +414,49 @@ static void get_fps_and_hz(char *fps_out, size_t fps_len, char *ft_out, size_t f
     char buf[128];
 
     // 1. Detect Screen Refresh Rate (Hz)
-    read_file_string("/sys/class/graphics/fb0/dynamic_fps", buf, sizeof(buf));
-    if (buf[0] && atoi(buf) > 0) {
-        snprintf(cached_hz, sizeof(cached_hz), "%dHz", atoi(buf));
-    } else {
-        read_file_string("/sys/class/graphics/fb0/mode_name", buf, sizeof(buf));
-        if (buf[0]) {
-            char *p = strstr(buf, "@");
-            if (p && atoi(p + 1) > 0) {
-                snprintf(cached_hz, sizeof(cached_hz), "%dHz", atoi(p + 1));
+    glob_t g_hz;
+    const char *hz_paths[] = {
+        "/sys/class/graphics/fb0/dynamic_fps",
+        "/sys/class/graphics/fb0/fps",
+        "/sys/class/drm/sde-crtc-0/fps",
+        "/sys/class/drm/card0-DSI-1/fps",
+        "/sys/devices/platform/soc/*display*/fps",
+        "/sys/devices/platform/soc/*display*/fps_select",
+        "/sys/class/graphics/fb0/mode_name",
+        "/sys/class/drm/card0-DP-1/mode",
+        NULL
+    };
+    for (int i = 0; hz_paths[i] != NULL; i++) {
+        if (strchr(hz_paths[i], '*')) {
+            if (glob(hz_paths[i], 0, NULL, &g_hz) == 0) {
+                for (size_t k = 0; k < g_hz.gl_pathc; k++) {
+                    read_file_string(g_hz.gl_pathv[k], buf, sizeof(buf));
+                    if (buf[0]) {
+                        char *p = strstr(buf, "@");
+                        int val = p ? atoi(p + 1) : atoi(buf);
+                        if (val > 0) {
+                            snprintf(cached_hz, sizeof(cached_hz), "%dHz", val);
+                            globfree(&g_hz);
+                            goto hz_found;
+                        }
+                    }
+                }
+                globfree(&g_hz);
+            }
+        } else {
+            read_file_string(hz_paths[i], buf, sizeof(buf));
+            if (buf[0]) {
+                char *p = strstr(buf, "@");
+                int val = p ? atoi(p + 1) : atoi(buf);
+                if (val > 0) {
+                    snprintf(cached_hz, sizeof(cached_hz), "%dHz", val);
+                    break;
+                }
             }
         }
     }
+hz_found:
+    ;
 
     // 2. Multi-backend FPS Detection
 
