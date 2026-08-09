@@ -262,13 +262,17 @@ public class FPSMoonOverlay {
     public static void main(String[] args) {
         System.out.println("[FPS Moon] Starting overlay...");
 
-        String envState = System.getenv("FPSMOON_STATE_DIR");
-        if (envState != null && !envState.trim().isEmpty()) {
-            stateDir = envState.trim();
-            statePath  = stateDir + "/stats.json";
-            configPath = stateDir + "/config.json";
-            posPath    = stateDir + "/position.json";
+        if (args != null && args.length > 0 && args[0] != null && !args[0].trim().isEmpty()) {
+            stateDir = args[0].trim();
+        } else {
+            String envState = System.getenv("FPSMOON_STATE_DIR");
+            if (envState != null && !envState.trim().isEmpty()) {
+                stateDir = envState.trim();
+            }
         }
+        statePath  = stateDir + "/stats.json";
+        configPath = stateDir + "/config.json";
+        posPath    = stateDir + "/position.json";
 
         try {
             Looper.prepareMainLooper();

@@ -14,6 +14,8 @@ chmod 777 "$MODDIR/state"
 pkill -f "fpsmoon_daemon" 2>/dev/null
 pkill -f "com.fpsmoon.FPSMoonOverlay" 2>/dev/null
 
+export FPSMOON_STATE_DIR="$MODDIR/state"
+
 # 1. Start Native C Telemetry Daemon
 if [ -f "$MODDIR/bin/fpsmoon_daemon" ]; then
     ( "$MODDIR/bin/fpsmoon_daemon" > "$MODDIR/state/daemon.log" 2>&1 & )
@@ -21,5 +23,5 @@ fi
 
 # 2. Start Native app_process Java Overlay Engine
 if [ -f "$MODDIR/bin/fpsmoon.dex" ]; then
-    ( CLASSPATH="$MODDIR/bin/fpsmoon.dex" app_process /system/bin com.fpsmoon.FPSMoonOverlay > "$MODDIR/state/overlay.log" 2>&1 & )
+    ( CLASSPATH="$MODDIR/bin/fpsmoon.dex" app_process /system/bin com.fpsmoon.FPSMoonOverlay "$MODDIR/state" > "$MODDIR/state/overlay.log" 2>&1 & )
 fi
