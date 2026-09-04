@@ -26,7 +26,7 @@
           </div>
           <div class="hero-author-line">
             <span>Crafted with precision by</span>
-            <a href="https://github.com/itswill00/fpsmoon" target="_blank" class="author-link" @click.stop="openGithub">
+            <a href="https://github.com/itswill00/fpsmoon" target="_blank" class="author-link" @click.prevent="openGithub">
               @itswill00
             </a>
           </div>
@@ -109,6 +109,36 @@
         </div>
       </div>
 
+      <!-- Community & Support -->
+      <div class="section-title">Community &amp; Support</div>
+      <div class="md3-list-group">
+        <div class="md3-list-row clickable" @click="openRepo">
+          <div class="row-left">
+            <div class="icon-badge">
+              <Icons name="github" :size="18" />
+            </div>
+            <div class="row-meta">
+              <div class="row-title">Source Repository</div>
+              <div class="row-sub">GitHub repository and releases</div>
+            </div>
+          </div>
+          <Icons name="chevron-right" :size="18" style="color: var(--on-surface-variant);" />
+        </div>
+
+        <div class="md3-list-row clickable" @click="openIssues">
+          <div class="row-left">
+            <div class="icon-badge">
+              <Icons name="about" :size="18" />
+            </div>
+            <div class="row-meta">
+              <div class="row-title">Report an Issue</div>
+              <div class="row-sub">Submit bug reports and feature requests</div>
+            </div>
+          </div>
+          <Icons name="chevron-right" :size="18" style="color: var(--on-surface-variant);" />
+        </div>
+      </div>
+
       <!-- Release Notes -->
       <div class="section-title">Release Notes</div>
       <div class="md3-list-group">
@@ -144,6 +174,14 @@ const store = useFpsMoonStore()
 
 function openGithub() {
   openExternal('https://github.com/itswill00/fpsmoon')
+}
+
+function openRepo() {
+  openExternal('https://github.com/itswill00/fpsmoon')
+}
+
+function openIssues() {
+  openExternal('https://github.com/itswill00/fpsmoon/issues')
 }
 
 onMounted(() => {

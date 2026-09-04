@@ -27,12 +27,12 @@ export function execCommand(cmd, timeoutMs = 5000) {
       } catch (e) {
         clearTimeout(timer)
         delete window[id]
-        reject(e)
+        resolve('')
       }
     } else if (typeof exec === 'function') {
       exec(cmd)
         .then(r => resolve(typeof r === 'object' ? (r.stdout || r.stderr || '') : String(r)))
-        .catch(reject)
+        .catch(() => resolve(''))
     } else {
       /* Browser fallback */
       resolve('')

@@ -165,6 +165,7 @@ export const useFpsMoonStore = defineStore('fpsmoon', () => {
       config.value.show_gpu_freq = true
       config.value.show_gpu_gov = false
       config.value.show_ram = false
+      config.value.show_zram = false
       config.value.show_battery = true
       config.value.show_net = false
       if (isHoriz) {
@@ -183,6 +184,7 @@ export const useFpsMoonStore = defineStore('fpsmoon', () => {
       config.value.show_gpu_freq = false
       config.value.show_gpu_gov = false
       config.value.show_ram = false
+      config.value.show_zram = false
       config.value.show_battery = false
       config.value.show_net = false
       if (isHoriz) {
@@ -201,8 +203,9 @@ export const useFpsMoonStore = defineStore('fpsmoon', () => {
       config.value.show_gpu_freq = true
       config.value.show_gpu_gov = true
       config.value.show_ram = true
+      config.value.show_zram = false
       config.value.show_battery = true
-      config.value.show_net = true
+      config.value.show_net = false
       if (isHoriz) {
         config.value.bg_width = 320
         config.value.bg_height = 68
@@ -230,14 +233,24 @@ export const useFpsMoonStore = defineStore('fpsmoon', () => {
 
   async function checkProcesses() {
     try {
-      const dPid = await execCommand('pidof fpsmoon_daemon 2>/dev/null || pgrep -x fpsmoon_daemon 2>/dev/null')
-      daemonPid.value = dPid ? dPid.trim().split(' ')[0] : ''
-      daemonRunning.value = !!daemonPid.value
-
-      const oPid = await execCommand('pgrep -f com.fpsmoon.FPSMoonOverlay 2>/dev/null')
-      overlayPid.value = oPid ? oPid.trim().split('\n')[0] : ''
-      overlayRunning.value = !!overlayPid.value
-    } catch (e) {}
+      const out = await execCommand('echo "D:$(pidof fpsmoon_daemon 2>/dev/null || pgrep -x fpsmoon_daemon 2>/dev/null)"; echo "O:$(pgrep -f com.fpsmoon.FPSMoonOverlay 2>/dev/null)"')
+      if (out) {
+        const dMatch = out.match(/D:\s*(\d+)/)
+        const oMatch = out.match(/O:\s*(\d+)/)
+        daemonPid.value = dMatch ? dMatch[1] : ''
+        daemonRunning.value = !!daemonPid.value
+        overlayPid.value = oMatch ? oMatch[1] : ''
+        overlayRunning.value = !!overlayPid.value
+      } else {
+        daemonRunning.value = false
+        daemonPid.value = ''
+        overlayRunning.value = false
+        overlayPid.value = ''
+      }
+    } catch (e) {
+      daemonRunning.value = false
+      overlayRunning.value = false
+    }
   }
 
   async function restartService() {
@@ -263,19 +276,21 @@ export const useFpsMoonStore = defineStore('fpsmoon', () => {
     } catch (e) {}
   }
 
+  let deviceInfoLoaded = false
   async function loadDeviceInfo() {
+    if (deviceInfoLoaded) return
     try {
-      const model = await execCommand('getprop ro.product.model 2>/dev/null')
-      const brand = await execCommand('getprop ro.product.brand 2>/dev/null')
-      const android = await execCommand('getprop ro.build.version.release 2>/dev/null')
-      const kernel = await execCommand('uname -r 2>/dev/null')
-      const soc = await execCommand('getprop ro.soc.model 2>/dev/null || getprop ro.board.platform 2>/dev/null')
-
-      if (model && model.trim()) deviceInfo.value.model = model.trim()
-      if (brand && brand.trim()) deviceInfo.value.brand = brand.trim()
-      if (android && android.trim()) deviceInfo.value.androidVer = `Android ${android.trim()}`
-      if (kernel && kernel.trim()) deviceInfo.value.kernelVer = kernel.trim()
-      if (soc && soc.trim()) deviceInfo.value.soc = soc.trim()
+      const cmd = 'echo "$(getprop ro.product.model)|||$(getprop ro.product.brand)|||$(getprop ro.build.version.release)|||$(uname -r)|||$(getprop ro.soc.model 2>/dev/null || getprop ro.board.platform 2>/dev/null)"'
+      const out = await execCommand(cmd)
+      if (out && out.includes('|||')) {
+        const parts = out.trim().split('|||')
+        if (parts[0]) deviceInfo.value.model = parts[0].trim()
+        if (parts[1]) deviceInfo.value.brand = parts[1].trim()
+        if (parts[2]) deviceInfo.value.androidVer = `Android ${parts[2].trim()}`
+        if (parts[3]) deviceInfo.value.kernelVer = parts[3].trim()
+        if (parts[4]) deviceInfo.value.soc = parts[4].trim()
+        deviceInfoLoaded = true
+      }
     } catch (e) {}
   }
 

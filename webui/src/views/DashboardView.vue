@@ -28,28 +28,27 @@
           </div>
         </div>
 
-        <!-- Stat Chips -->
+        <!-- High-level Status Chips -->
         <div class="banner-stats-row">
           <div class="banner-chip">
-            <span>FPS: <strong>{{ store.stats.fps || '--' }}</strong></span>
+            <span>Service: <strong>{{ store.config.visible ? 'Running' : 'Standby' }}</strong></span>
           </div>
           <div class="banner-chip">
-            <span>CPU: <strong>{{ store.stats.cpu_load ? store.stats.cpu_load + '%' : '--' }}</strong></span>
+            <span>Layout: <strong>{{ store.config.is_horizontal ? 'Horizontal' : 'Vertical' }}</strong></span>
           </div>
           <div class="banner-chip">
-            <span>GPU: <strong>{{ store.stats.gpu_load ? store.stats.gpu_load + '%' : '--' }}</strong></span>
+            <span>Align: <strong>{{ (store.config.align || 'left').toUpperCase() }}</strong></span>
           </div>
           <div class="banner-chip">
-            <span>Power: <strong>{{ store.stats.bat_watt ? store.stats.bat_watt + 'W' : '--' }}</strong></span>
+            <span>Scale: <strong>{{ Math.round((store.config.scale || 0.79) * 100) }}%</strong></span>
+          </div>
+          <div class="banner-chip">
+            <span>Display: <strong>{{ store.stats.screen_hz ? store.stats.screen_hz + ' Hz' : '60 Hz' }}</strong></span>
           </div>
         </div>
 
         <!-- Quick Actions Row -->
         <div class="quick-actions-row">
-          <button class="quick-act-btn" @click="handleToggle">
-            <Icons name="power" :size="14" />
-            <span>{{ store.config.visible ? 'Hide overlay' : 'Show overlay' }}</span>
-          </button>
           <button class="quick-act-btn" @click="handleReset">
             <Icons name="reset" :size="14" />
             <span>Reset position</span>
@@ -57,6 +56,10 @@
           <button class="quick-act-btn" @click="handleRestart">
             <Icons name="refresh" :size="14" />
             <span>Restart service</span>
+          </button>
+          <button class="quick-act-btn" @click="goToLogs">
+            <Icons name="logs" :size="14" />
+            <span>Activity log</span>
           </button>
         </div>
       </div>
@@ -69,8 +72,8 @@
               <Icons name="screen" :size="18" />
             </div>
             <div class="row-meta">
-              <div class="row-title">Show overlay</div>
-              <div class="row-sub">Display performance stats on screen</div>
+              <div class="row-title">Screen overlay</div>
+              <div class="row-sub">{{ store.config.visible ? 'Floating overlay displayed on screen' : 'Overlay hidden from screen' }}</div>
             </div>
           </div>
           <label class="md3-switch" @click.stop>
@@ -190,13 +193,64 @@
 </template>
 
 <script setup>
-import { ref, inject } from 'vue'
+import { computed, inject } from 'vue'
+import { useRouter } from 'vue-router'
 import { useFpsMoonStore } from '@/stores/fpsmoon'
 import Icons from '@/components/icons/Icons.vue'
 
 const store = useFpsMoonStore()
+const router = useRouter()
 const toast = inject('toast')
-const activePreset = ref('detailed')
+
+const activePreset = computed(() => {
+  const c = store.config
+  if (
+    c.show_fps &&
+    !c.show_cpu &&
+    !c.show_cpu_freq &&
+    !c.show_gov &&
+    !c.show_gpu &&
+    !c.show_gpu_freq &&
+    !c.show_gpu_gov &&
+    !c.show_ram &&
+    !c.show_zram &&
+    !c.show_battery &&
+    !c.show_net
+  ) {
+    return 'minimal'
+  }
+  if (
+    c.show_fps &&
+    c.show_cpu &&
+    c.show_cpu_freq &&
+    !c.show_gov &&
+    c.show_gpu &&
+    c.show_gpu_freq &&
+    !c.show_gpu_gov &&
+    !c.show_ram &&
+    !c.show_zram &&
+    c.show_battery &&
+    !c.show_net
+  ) {
+    return 'compact'
+  }
+  if (
+    c.show_fps &&
+    c.show_cpu &&
+    c.show_cpu_freq &&
+    c.show_gov &&
+    c.show_gpu &&
+    c.show_gpu_freq &&
+    c.show_gpu_gov &&
+    c.show_ram &&
+    !c.show_zram &&
+    c.show_battery &&
+    !c.show_net
+  ) {
+    return 'detailed'
+  }
+  return null
+})
 
 function handleToggle() {
   store.toggleOverlay()
@@ -212,6 +266,10 @@ async function handleRestart() {
   toast('Restarting services...')
   await store.restartService()
   toast('Services restarted')
+}
+
+function goToLogs() {
+  router.push('/logs')
 }
 
 function onConfigChange(msg) {
@@ -230,7 +288,6 @@ function changeAlignment(align) {
 }
 
 function changePreset(type) {
-  activePreset.value = type
   store.applyPreset(type)
   const label = type.charAt(0).toUpperCase() + type.slice(1)
   toast(`${label} preset applied`)

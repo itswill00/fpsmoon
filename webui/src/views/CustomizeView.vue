@@ -165,6 +165,25 @@
           </label>
         </div>
 
+        <!-- Compressed Memory (ZRAM) -->
+        <div class="md3-list-row clickable" @click="toggleItem('show_zram')">
+          <div class="row-left">
+            <div class="icon-badge">
+              <Icons name="chip" :size="18" />
+            </div>
+            <div class="row-meta">
+              <div class="row-title">ZRAM swap</div>
+              <div class="row-sub">Compressed memory usage</div>
+            </div>
+          </div>
+          <label class="md3-switch" @click.stop>
+            <input type="checkbox" v-model="store.config.show_zram" @change="onToggleChange" />
+            <span class="md3-switch-track">
+              <span class="md3-switch-thumb"></span>
+            </span>
+          </label>
+        </div>
+
         <!-- Battery -->
         <div class="md3-list-row clickable" @click="toggleItem('show_battery')">
           <div class="row-left">

@@ -3,4 +3,4 @@ name=FPS Moon
 version=v1.0.1
 versionCode=101
 author=@itswill00
-description=Performance monitor overlay and control panel for Android
+description=Lightweight real-time performance HUD and screen overlay with single-file WebUI for Android.

@@ -40,12 +40,12 @@ export FPSMOON_STATE_DIR="$MODDIR/state"
 
 # 1. Start Native C Telemetry Daemon
 if [ -f "$MODDIR/bin/fpsmoon_daemon" ]; then
-    ( "$MODDIR/bin/fpsmoon_daemon" > "$MODDIR/state/daemon.log" 2>&1 & )
+    nohup "$MODDIR/bin/fpsmoon_daemon" > "$MODDIR/state/daemon.log" 2>&1 &
 fi
 
 # 2. Start Native app_process Java Overlay Engine
 if [ -f "$MODDIR/bin/fpsmoon.dex" ]; then
-    ( CLASSPATH="$MODDIR/bin/fpsmoon.dex" /system/bin/app_process /system/bin com.fpsmoon.FPSMoonOverlay "$MODDIR/state" > "$MODDIR/state/overlay.log" 2>&1 & )
+    CLASSPATH="$MODDIR/bin/fpsmoon.dex" nohup /system/bin/app_process /system/bin com.fpsmoon.FPSMoonOverlay "$MODDIR/state" > "$MODDIR/state/overlay.log" 2>&1 &
 fi
 
 sleep 1

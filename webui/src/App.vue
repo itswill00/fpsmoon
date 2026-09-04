@@ -93,6 +93,11 @@ watch(
     if (toIdx !== -1 && fromIdx !== -1) {
       transitionName.value = toIdx > fromIdx ? 'slide-left' : 'slide-right'
     }
+    if (to === '/') {
+      store.startPolling()
+    } else {
+      store.stopPolling()
+    }
   }
 )
 
@@ -109,7 +114,7 @@ provide('toast', toast)
 function handleVisibilityChange() {
   if (document.hidden) {
     store.stopPolling()
-  } else {
+  } else if (route.path === '/') {
     store.startPolling()
   }
 }
@@ -117,7 +122,9 @@ function handleVisibilityChange() {
 onMounted(() => {
   store.loadConfig()
   store.loadPosition()
-  store.startPolling()
+  if (route.path === '/') {
+    store.startPolling()
+  }
   document.addEventListener('visibilitychange', handleVisibilityChange)
 })
 
@@ -130,7 +137,7 @@ onUnmounted(() => {
 <style>
 .slide-left-enter-active,
 .slide-right-enter-active {
-  transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+  transition: transform 0.20s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.16s ease;
   position: absolute;
   width: 100%;
   height: 100%;
@@ -139,7 +146,7 @@ onUnmounted(() => {
 
 .slide-left-leave-active,
 .slide-right-leave-active {
-  transition: transform 0.2s cubic-bezier(0.4, 0, 1, 1), opacity 0.16s ease;
+  transition: transform 0.16s cubic-bezier(0.4, 0, 1, 1), opacity 0.12s ease;
   position: absolute;
   width: 100%;
   height: 100%;
