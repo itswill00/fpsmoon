@@ -29,8 +29,12 @@ cmd appops set com.android.shell SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
 pm grant com.android.shell android.permission.SYSTEM_ALERT_WINDOW 2>/dev/null || true
 
 # Kill any stale instances
-pkill -f "fpsmoon_daemon" 2>/dev/null
-pkill -f "com.fpsmoon.FPSMoonOverlay" 2>/dev/null
+killall -9 fpsmoon_daemon 2>/dev/null || pkill -9 -x fpsmoon_daemon 2>/dev/null || true
+for p in $(pgrep -f "com.fpsmoon.FPSMoonOverlay" 2>/dev/null); do
+    if [ "$p" != "$$" ] && [ "$p" != "$PPID" ]; then
+        kill -9 "$p" 2>/dev/null || true
+    fi
+done
 
 export FPSMOON_STATE_DIR="$MODDIR/state"
 
