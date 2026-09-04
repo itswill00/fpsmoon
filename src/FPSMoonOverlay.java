@@ -34,6 +34,8 @@ import java.util.regex.Pattern;
 public class FPSMoonOverlay {
     private static Context context;
     private static WindowManager windowManager;
+    private static Context sysContext;
+    private static Display defaultDisplay;
     private static CanvasHudView hudView;
     private static WindowManager.LayoutParams params;
     private static Handler handler;
@@ -378,7 +380,6 @@ public class FPSMoonOverlay {
             } catch (Throwable ignored) {}
 
             // 3. Acquire System Context via ActivityThread
-            Context sysContext = null;
             try {
                 Class<?> activityThreadClass = Class.forName("android.app.ActivityThread");
                 Method systemMainMethod = activityThreadClass.getMethod("systemMain");
@@ -415,9 +416,8 @@ public class FPSMoonOverlay {
                 }
             } catch (Throwable ignored) {}
 
-            // 5. Multi-tiered Context Resolution: WindowContext (API 30+) -> DisplayContext -> SystemContext
+            // 5. Context & Display Resolution
             context = sysContext; // Primary fallback
-            Display defaultDisplay = null;
             try {
                 DisplayManager dm = (DisplayManager) sysContext.getSystemService(Context.DISPLAY_SERVICE);
                 if (dm != null) {
@@ -433,32 +433,15 @@ public class FPSMoonOverlay {
                 System.err.println("[FPS Moon Warning] DisplayContext fallback: " + t.getMessage());
             }
 
-            if (Build.VERSION.SDK_INT >= 30) {
-                try {
-                    Method createWindowContextMethod = null;
-                    try {
-                        createWindowContextMethod = Context.class.getMethod("createWindowContext", Display.class, int.class, android.os.Bundle.class);
-                        Context winCtx = (Context) createWindowContextMethod.invoke(sysContext, defaultDisplay, 2038, null);
-                        if (winCtx != null) context = winCtx;
-                    } catch (NoSuchMethodException e) {
-                        createWindowContextMethod = Context.class.getMethod("createWindowContext", int.class, android.os.Bundle.class);
-                        Context winCtx = (Context) createWindowContextMethod.invoke(context, 2038, null);
-                        if (winCtx != null) context = winCtx;
-                    }
-                } catch (Throwable t) {
-                    System.err.println("[FPS Moon Warning] WindowContext fallback: " + t.getMessage());
-                }
-            }
-
             try {
-                windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+                windowManager = (WindowManager) sysContext.getSystemService(Context.WINDOW_SERVICE);
             } catch (Throwable t) {
-                System.err.println("[FPS Moon Warning] Context WINDOW_SERVICE: " + t.getMessage());
+                System.err.println("[FPS Moon Warning] sysContext WINDOW_SERVICE: " + t.getMessage());
             }
 
-            if (windowManager == null && sysContext != null) {
+            if (windowManager == null) {
                 try {
-                    windowManager = (WindowManager) sysContext.getSystemService(Context.WINDOW_SERVICE);
+                    windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
                 } catch (Throwable ignored) {}
             }
 
@@ -668,30 +651,100 @@ public class FPSMoonOverlay {
 
         int[] windowTypes = new int[]{
             2038, // TYPE_APPLICATION_OVERLAY
-            2034, // TYPE_SYSTEM_NOTIFICATION
-            2032, // TYPE_ACCESSIBILITY_OVERLAY
             2010, // TYPE_SYSTEM_ERROR
             2006, // TYPE_SYSTEM_OVERLAY
             2003, // TYPE_SYSTEM_ALERT
+            2032, // TYPE_ACCESSIBILITY_OVERLAY
+            2034, // TYPE_SYSTEM_NOTIFICATION
+            2015, // TYPE_SECURE_SYSTEM_OVERLAY
             2002  // TYPE_PHONE
         };
 
         boolean attached = false;
         for (int type : windowTypes) {
-            try {
-                params.type = type;
-                if (type == 2006 || type == 2015) {
-                    params.flags |= WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
-                } else {
-                    params.flags &= ~WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
-                }
-                windowManager.addView(hudView, params);
-                System.out.println("[FPS Moon] Successfully attached to WindowManager layer " + type);
-                attached = true;
-                break;
-            } catch (Throwable t) {
-                System.err.println("[FPS Moon Warning] Failed layer " + type + ": " + t.getMessage());
+            params.type = type;
+            if (type == 2006 || type == 2015) {
+                params.flags |= WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
+            } else {
+                params.flags &= ~WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
             }
+
+            // Strategy 1: Create a dedicated WindowContext for this layer on Android 12+ (API 31+)
+            Context targetCtx = null;
+            WindowManager targetWm = null;
+
+            if (Build.VERSION.SDK_INT >= 30 && defaultDisplay != null && sysContext != null) {
+                try {
+                    Method createWindowContextMethod = Context.class.getMethod("createWindowContext", Display.class, int.class, android.os.Bundle.class);
+                    targetCtx = (Context) createWindowContextMethod.invoke(sysContext, defaultDisplay, type, null);
+                } catch (Throwable t1) {
+                    try {
+                        Method createWindowContextMethod = Context.class.getMethod("createWindowContext", int.class, android.os.Bundle.class);
+                        targetCtx = (Context) createWindowContextMethod.invoke(sysContext, type, null);
+                    } catch (Throwable ignored) {}
+                }
+            }
+
+            if (targetCtx != null) {
+                try {
+                    targetWm = (WindowManager) targetCtx.getSystemService(Context.WINDOW_SERVICE);
+                } catch (Throwable ignored) {}
+            }
+
+            // Strategy 2: SystemContext root WindowManager (global, no WindowContext type lock)
+            if (targetWm == null && sysContext != null) {
+                try {
+                    targetWm = (WindowManager) sysContext.getSystemService(Context.WINDOW_SERVICE);
+                    targetCtx = sysContext;
+                } catch (Throwable ignored) {}
+            }
+
+            if (targetWm == null) {
+                targetWm = windowManager;
+                targetCtx = context;
+            }
+
+            // Candidate packages to try
+            String[] candidatePackages = new String[]{
+                "android",
+                "com.android.shell",
+                (targetCtx != null ? targetCtx.getPackageName() : null),
+                null
+            };
+
+            for (String pkg : candidatePackages) {
+                params.packageName = pkg;
+                try {
+                    if (targetWm != null) {
+                        targetWm.addView(hudView, params);
+                        System.out.println("[FPS Moon] Successfully attached to WindowManager layer " + type + (pkg != null ? " (pkg=" + pkg + ")" : ""));
+                        windowManager = targetWm;
+                        context = targetCtx != null ? targetCtx : context;
+                        attached = true;
+                        break;
+                    }
+                } catch (Throwable t) {
+                    String msg = (t.getMessage() != null) ? t.getMessage() : t.toString();
+                    if (msg.contains("Window type mismatch") && sysContext != null) {
+                        try {
+                            WindowManager rootWm = (WindowManager) sysContext.getSystemService(Context.WINDOW_SERVICE);
+                            if (rootWm != null && rootWm != targetWm) {
+                                rootWm.addView(hudView, params);
+                                System.out.println("[FPS Moon] Successfully attached to WindowManager layer " + type + " via SystemContext" + (pkg != null ? " (pkg=" + pkg + ")" : ""));
+                                windowManager = rootWm;
+                                context = sysContext;
+                                attached = true;
+                                break;
+                            }
+                        } catch (Throwable t2) {
+                            msg = (t2.getMessage() != null) ? t2.getMessage() : t2.toString();
+                        }
+                    }
+                    System.err.println("[FPS Moon Warning] Failed layer " + type + (pkg != null ? " [" + pkg + "]" : "") + ": " + msg);
+                }
+            }
+
+            if (attached) break;
         }
 
         if (!attached) {
