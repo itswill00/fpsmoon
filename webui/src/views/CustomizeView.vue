@@ -4,24 +4,24 @@
     <div class="page-header">
       <div>
         <div class="page-header-title">Customize</div>
-        <div class="page-header-sub">Display Metrics &amp; Appearance</div>
+        <div class="page-header-sub">Display items and card appearance</div>
       </div>
     </div>
 
     <!-- Scrollable Content Area -->
     <div class="content-area">
-      <!-- Items To Display -->
-      <div class="section-title">Items to display</div>
+      <!-- Display Items Section -->
+      <div class="section-title">Display items</div>
       <div class="md3-list-group">
-        <!-- FPS & Screen Hz -->
+        <!-- Frame Rate & Screen Refresh -->
         <div class="md3-list-row clickable" @click="toggleItem('show_fps')">
           <div class="row-left">
             <div class="icon-badge">
               <Icons name="fps" :size="18" />
             </div>
             <div class="row-meta">
-              <div class="row-title">Frame rate and refresh rate</div>
-              <div class="row-sub">Game FPS, frametime, and screen Hz</div>
+              <div class="row-title">Frame rate</div>
+              <div class="row-sub">Frames per second and display refresh rate</div>
             </div>
           </div>
           <label class="md3-switch" @click.stop>
@@ -32,15 +32,15 @@
           </label>
         </div>
 
-        <!-- CPU Load -->
+        <!-- Processor (CPU) -->
         <div class="md3-list-row clickable" @click="toggleItem('show_cpu')">
           <div class="row-left">
             <div class="icon-badge">
               <Icons name="cpu" :size="18" />
             </div>
             <div class="row-meta">
-              <div class="row-title">Processor (CPU)</div>
-              <div class="row-sub">CPU load and temperature</div>
+              <div class="row-title">Processor</div>
+              <div class="row-sub">CPU usage and temperature</div>
             </div>
           </div>
           <label class="md3-switch" @click.stop>
@@ -51,15 +51,15 @@
           </label>
         </div>
 
-        <!-- CPU Frequency -->
+        <!-- CPU Clock Speed -->
         <div class="md3-list-row clickable" @click="toggleItem('show_cpu_freq')">
           <div class="row-left">
             <div class="icon-badge">
               <Icons name="chip" :size="18" />
             </div>
             <div class="row-meta">
-              <div class="row-title">CPU frequency</div>
-              <div class="row-sub">Show current CPU clock speed</div>
+              <div class="row-title">CPU clock speed</div>
+              <div class="row-sub">Active processor frequency</div>
             </div>
           </div>
           <label class="md3-switch" @click.stop>
@@ -78,7 +78,7 @@
             </div>
             <div class="row-meta">
               <div class="row-title">CPU governor</div>
-              <div class="row-sub">Active governor and policy range</div>
+              <div class="row-sub">Scaling governor and policy range</div>
             </div>
           </div>
           <label class="md3-switch" @click.stop>
@@ -89,15 +89,15 @@
           </label>
         </div>
 
-        <!-- GPU Load -->
+        <!-- Graphics (GPU) -->
         <div class="md3-list-row clickable" @click="toggleItem('show_gpu')">
           <div class="row-left">
             <div class="icon-badge">
               <Icons name="gpu" :size="18" />
             </div>
             <div class="row-meta">
-              <div class="row-title">Graphics card (GPU)</div>
-              <div class="row-sub">GPU load and temperature</div>
+              <div class="row-title">Graphics</div>
+              <div class="row-sub">GPU usage and temperature</div>
             </div>
           </div>
           <label class="md3-switch" @click.stop>
@@ -108,15 +108,15 @@
           </label>
         </div>
 
-        <!-- GPU Frequency -->
+        <!-- GPU Clock Speed -->
         <div class="md3-list-row clickable" @click="toggleItem('show_gpu_freq')">
           <div class="row-left">
             <div class="icon-badge">
               <Icons name="zap" :size="18" />
             </div>
             <div class="row-meta">
-              <div class="row-title">GPU frequency</div>
-              <div class="row-sub">Show current GPU clock speed</div>
+              <div class="row-title">GPU clock speed</div>
+              <div class="row-sub">Active graphics processor frequency</div>
             </div>
           </div>
           <label class="md3-switch" @click.stop>
@@ -134,8 +134,8 @@
               <Icons name="sliders" :size="18" />
             </div>
             <div class="row-meta">
-              <div class="row-title">GPU governor and policy</div>
-              <div class="row-sub">Active GPU governor and frequency levels</div>
+              <div class="row-title">GPU governor</div>
+              <div class="row-sub">Active graphics governor and policy</div>
             </div>
           </div>
           <label class="md3-switch" @click.stop>
@@ -146,15 +146,15 @@
           </label>
         </div>
 
-        <!-- RAM Memory -->
+        <!-- Memory (RAM) -->
         <div class="md3-list-row clickable" @click="toggleItem('show_ram')">
           <div class="row-left">
             <div class="icon-badge">
               <Icons name="memory" :size="18" />
             </div>
             <div class="row-meta">
-              <div class="row-title">RAM memory</div>
-              <div class="row-sub">Used and total memory</div>
+              <div class="row-title">Memory</div>
+              <div class="row-sub">Used and total system RAM</div>
             </div>
           </div>
           <label class="md3-switch" @click.stop>
@@ -165,15 +165,15 @@
           </label>
         </div>
 
-        <!-- Battery & Power -->
+        <!-- Battery -->
         <div class="md3-list-row clickable" @click="toggleItem('show_battery')">
           <div class="row-left">
             <div class="icon-badge">
               <Icons name="battery" :size="18" />
             </div>
             <div class="row-meta">
-              <div class="row-title">Battery and power</div>
-              <div class="row-sub">Power usage, current, and temperature</div>
+              <div class="row-title">Battery</div>
+              <div class="row-sub">Power usage, current draw, and temperature</div>
             </div>
           </div>
           <label class="md3-switch" @click.stop>
@@ -191,8 +191,8 @@
               <Icons name="net" :size="18" />
             </div>
             <div class="row-meta">
-              <div class="row-title">Internet speed</div>
-              <div class="row-sub">Download and upload speed</div>
+              <div class="row-title">Network speed</div>
+              <div class="row-sub">Download and upload rate</div>
             </div>
           </div>
           <label class="md3-switch" @click.stop>
@@ -204,21 +204,23 @@
         </div>
       </div>
 
-      <!-- Style and Card Size Sliders -->
-      <div class="section-title">Style and card size</div>
+      <!-- Appearance Sliders Section -->
+      <div class="section-title">Appearance</div>
       <div class="md3-list-group">
         <!-- Card Width -->
         <div class="slider-row">
           <div class="slider-label-line">
             <span class="slider-title">Card width</span>
-            <span class="slider-val-badge">{{ store.config.bg_width || 250 }}px</span>
+            <span class="slider-val-badge">{{ store.config.bg_width || 150 }}px</span>
           </div>
           <input
             type="range"
-            min="150"
+            min="100"
             max="400"
+            step="2"
             v-model.number="store.config.bg_width"
             @input="onSliderInput"
+            @change="onSliderChange"
             class="md3-range-slider"
           />
         </div>
@@ -227,30 +229,33 @@
         <div class="slider-row">
           <div class="slider-label-line">
             <span class="slider-title">Card height</span>
-            <span class="slider-val-badge">{{ store.config.bg_height || 56 }}px</span>
+            <span class="slider-val-badge">{{ store.config.bg_height || 160 }}px</span>
           </div>
           <input
             type="range"
-            min="40"
-            max="160"
+            min="36"
+            max="260"
+            step="2"
             v-model.number="store.config.bg_height"
             @input="onSliderInput"
+            @change="onSliderChange"
             class="md3-range-slider"
           />
         </div>
 
-        <!-- Overall Scale -->
+        <!-- Scale -->
         <div class="slider-row">
           <div class="slider-label-line">
-            <span class="slider-title">Overall scale</span>
-            <span class="slider-val-badge">{{ (store.config.scale || 1.0).toFixed(1) }}x</span>
+            <span class="slider-title">Scale</span>
+            <span class="slider-val-badge">{{ (store.config.scale || 0.79).toFixed(2) }}x</span>
           </div>
           <input
             type="range"
             min="50"
             max="180"
-            :value="Math.round((store.config.scale || 1.0) * 100)"
+            :value="Math.round((store.config.scale || 0.79) * 100)"
             @input="e => onScaleInput(e.target.value)"
+            @change="onSliderChange"
             class="md3-range-slider"
           />
         </div>
@@ -259,7 +264,7 @@
         <div class="slider-row">
           <div class="slider-label-line">
             <span class="slider-title">Text size</span>
-            <span class="slider-val-badge">{{ store.config.font_size || 12 }}sp</span>
+            <span class="slider-val-badge">{{ store.config.font_size || 11 }}sp</span>
           </div>
           <input
             type="range"
@@ -267,6 +272,7 @@
             max="22"
             v-model.number="store.config.font_size"
             @input="onSliderInput"
+            @change="onSliderChange"
             class="md3-range-slider"
           />
         </div>
@@ -283,39 +289,42 @@
             max="24"
             v-model.number="store.config.corner_radius"
             @input="onSliderInput"
+            @change="onSliderChange"
             class="md3-range-slider"
           />
         </div>
 
-        <!-- Refresh Interval -->
+        <!-- Update Interval -->
         <div class="slider-row">
           <div class="slider-label-line">
-            <span class="slider-title">Refresh interval</span>
-            <span class="slider-val-badge">{{ store.config.refresh_interval || 250 }}ms</span>
+            <span class="slider-title">Update speed</span>
+            <span class="slider-val-badge">{{ store.config.refresh_interval || 850 }}ms</span>
           </div>
           <input
             type="range"
             min="100"
-            max="1000"
+            max="1500"
             step="50"
             v-model.number="store.config.refresh_interval"
             @input="onSliderInput"
+            @change="onSliderChange"
             class="md3-range-slider"
           />
         </div>
 
-        <!-- Transparency / Opacity -->
+        <!-- Transparency -->
         <div class="slider-row">
           <div class="slider-label-line">
             <span class="slider-title">Transparency</span>
-            <span class="slider-val-badge">{{ Math.round((store.config.opacity || 0.85) * 100) }}%</span>
+            <span class="slider-val-badge">{{ Math.round((store.config.opacity || 0.58) * 100) }}%</span>
           </div>
           <input
             type="range"
             min="10"
             max="100"
-            :value="Math.round((store.config.opacity || 0.85) * 100)"
+            :value="Math.round((store.config.opacity || 0.58) * 100)"
             @input="e => onOpacityInput(e.target.value)"
+            @change="onSliderChange"
             class="md3-range-slider"
           />
         </div>
@@ -335,16 +344,20 @@ const toast = inject('toast')
 function toggleItem(key) {
   store.config[key] = !store.config[key]
   store.saveConfig()
-  toast('Settings updated')
+  toast('Settings saved')
 }
 
 function onToggleChange() {
   store.saveConfig()
-  toast('Settings updated')
+  toast('Settings saved')
 }
 
 function onSliderInput() {
   store.triggerInstantSave()
+}
+
+function onSliderChange() {
+  store.saveConfig()
 }
 
 function onScaleInput(val) {
@@ -386,7 +399,7 @@ function onOpacityInput(val) {
 .slider-val-badge {
   font-size: 11.5px;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--on-surface);
   font-variant-numeric: tabular-nums;
   background: var(--surface-container-high);
   padding: 2px 8px;

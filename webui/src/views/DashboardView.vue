@@ -4,9 +4,9 @@
     <div class="page-header">
       <div>
         <div class="page-header-title">Dashboard</div>
-        <div class="page-header-sub">Performance &amp; Overlay Overview</div>
+        <div class="page-header-sub">Overlay status and controls</div>
       </div>
-      <span class="badge-pill purple">{{ store.moduleVersion }}</span>
+      <span class="badge-pill">{{ store.moduleVersion }}</span>
     </div>
 
     <!-- Scrollable Content Area -->
@@ -20,15 +20,15 @@
           <div class="banner-title-group">
             <div class="banner-title-line">
               <span class="app-banner-title">FPS Moon</span>
-              <span :class="['badge-pill', store.config.visible ? 'green' : 'purple']">
+              <span class="badge-pill">
                 {{ store.config.visible ? 'Active' : 'Disabled' }}
               </span>
             </div>
-            <div class="app-banner-sub">Performance overlay by @itswill00</div>
+            <div class="app-banner-sub">Screen overlay by @itswill00</div>
           </div>
         </div>
 
-        <!-- Live Stat Chips -->
+        <!-- Stat Chips -->
         <div class="banner-stats-row">
           <div class="banner-chip">
             <span>FPS: <strong>{{ store.stats.fps || '--' }}</strong></span>
@@ -48,7 +48,7 @@
         <div class="quick-actions-row">
           <button class="quick-act-btn" @click="handleToggle">
             <Icons name="power" :size="14" />
-            <span>Toggle overlay</span>
+            <span>{{ store.config.visible ? 'Hide overlay' : 'Show overlay' }}</span>
           </button>
           <button class="quick-act-btn" @click="handleReset">
             <Icons name="reset" :size="14" />
@@ -61,7 +61,7 @@
         </div>
       </div>
 
-      <!-- Master Overlay Toggle -->
+      <!-- Master Overlay Switch -->
       <div class="md3-list-group">
         <div class="md3-list-row clickable" @click="handleToggle">
           <div class="row-left">
@@ -69,15 +69,15 @@
               <Icons name="screen" :size="18" />
             </div>
             <div class="row-meta">
-              <div class="row-title">Enable overlay</div>
-              <div class="row-sub">Show performance overlay on screen</div>
+              <div class="row-title">Show overlay</div>
+              <div class="row-sub">Display performance stats on screen</div>
             </div>
           </div>
           <label class="md3-switch" @click.stop>
             <input
               type="checkbox"
               v-model="store.config.visible"
-              @change="onConfigChange('Overlay ' + (store.config.visible ? 'enabled' : 'disabled'))"
+              @change="onConfigChange(store.config.visible ? 'Overlay enabled' : 'Overlay disabled')"
             />
             <span class="md3-switch-track">
               <span class="md3-switch-thumb"></span>
@@ -86,8 +86,8 @@
         </div>
       </div>
 
-      <!-- Current Stats Grid -->
-      <div class="section-title">Current stats</div>
+      <!-- Performance Stats Grid -->
+      <div class="section-title">Performance</div>
       <div class="stat-grid-2">
         <div class="stat-box">
           <span class="stat-label">Frame rate</span>
@@ -97,22 +97,22 @@
         <div class="stat-box">
           <span class="stat-label">Processor</span>
           <span class="stat-val">{{ store.stats.cpu_load !== '--' ? store.stats.cpu_load + '%' : '--' }}</span>
-          <span class="stat-sub">{{ (store.stats.cpu_freq || '--') + ' | ' + (store.stats.cpu_temp || '--') + '°C' }}</span>
+          <span class="stat-sub">{{ (store.stats.cpu_freq || '--') + ' · ' + (store.stats.cpu_temp || '--') + '°C' }}</span>
         </div>
         <div class="stat-box">
           <span class="stat-label">Graphics</span>
           <span class="stat-val">{{ store.stats.gpu_load !== '--' ? store.stats.gpu_load + '%' : '--' }}</span>
-          <span class="stat-sub">{{ (store.stats.gpu_freq || '--') + ' | ' + (store.stats.gpu_temp || '--') + '°C' }}</span>
+          <span class="stat-sub">{{ (store.stats.gpu_freq || '--') + ' · ' + (store.stats.gpu_temp || '--') + '°C' }}</span>
         </div>
         <div class="stat-box">
-          <span class="stat-label">Battery power</span>
+          <span class="stat-label">Battery</span>
           <span class="stat-val">{{ store.stats.bat_watt !== '--' ? store.stats.bat_watt + ' W' : '--' }}</span>
-          <span class="stat-sub">{{ store.stats.bat_temp ? 'Battery: ' + store.stats.bat_temp + '°C' : '--' }}</span>
+          <span class="stat-sub">{{ store.stats.bat_temp ? store.stats.bat_temp + '°C' : '--' }}</span>
         </div>
       </div>
 
-      <!-- Layout Style & Orientation -->
-      <div class="section-title">Layout style</div>
+      <!-- Layout Style -->
+      <div class="section-title">Layout</div>
       <div class="segmented-bar">
         <button
           class="segmented-btn"
@@ -137,25 +137,25 @@
           :class="{ active: store.config.align === 'left' }"
           @click="changeAlignment('left')"
         >
-          Left align
+          Left
         </button>
         <button
           class="segmented-btn"
           :class="{ active: store.config.align === 'center' }"
           @click="changeAlignment('center')"
         >
-          Center align
+          Center
         </button>
         <button
           class="segmented-btn"
           :class="{ active: store.config.align === 'right' }"
           @click="changeAlignment('right')"
         >
-          Right align
+          Right
         </button>
       </div>
 
-      <!-- Layout Presets -->
+      <!-- Presets -->
       <div class="section-title">Presets</div>
       <div class="segmented-bar">
         <button
@@ -196,7 +196,7 @@ import Icons from '@/components/icons/Icons.vue'
 
 const store = useFpsMoonStore()
 const toast = inject('toast')
-const activePreset = ref('compact')
+const activePreset = ref('detailed')
 
 function handleToggle() {
   store.toggleOverlay()
@@ -209,9 +209,9 @@ function handleReset() {
 }
 
 async function handleRestart() {
-  toast('Restarting FPS Moon services...')
+  toast('Restarting services...')
   await store.restartService()
-  toast('Services restarted successfully')
+  toast('Services restarted')
 }
 
 function onConfigChange(msg) {
@@ -221,19 +221,19 @@ function onConfigChange(msg) {
 
 function changeOrientation(val) {
   store.setOrientation(val)
-  toast(val ? 'Horizontal pill layout' : 'Vertical stack layout')
+  toast(val ? 'Horizontal layout' : 'Vertical layout')
 }
 
 function changeAlignment(align) {
   store.setAlignment(align)
-  toast(`Alignment set to ${align}`)
+  toast(`Aligned to ${align}`)
 }
 
 function changePreset(type) {
   activePreset.value = type
   store.applyPreset(type)
   const label = type.charAt(0).toUpperCase() + type.slice(1)
-  toast(`Applied ${label} preset`)
+  toast(`${label} preset applied`)
 }
 </script>
 
@@ -257,12 +257,12 @@ function changePreset(type) {
   width: 44px;
   height: 44px;
   border-radius: 14px;
-  background: var(--primary-container);
-  border: 1px solid rgba(167, 139, 250, 0.2);
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline-variant);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--primary);
+  color: var(--on-surface);
   flex-shrink: 0;
 }
 
@@ -327,14 +327,14 @@ function changePreset(type) {
   padding: 8px 10px;
   color: var(--on-surface);
   font-size: 11.5px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .quick-act-btn:active {
   background: var(--surface-bright);
-  transform: scale(0.96);
+  transform: scale(0.97);
 }
 
 .stat-grid-2 {
@@ -379,7 +379,7 @@ function changePreset(type) {
   text-align: center;
   font-size: 11px;
   color: var(--on-surface-variant);
-  opacity: 0.6;
+  opacity: 0.5;
   padding: 16px 0 10px 0;
 }
 </style>

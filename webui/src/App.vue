@@ -44,15 +44,23 @@ const routesOrder = ['/', '/customize', '/logs', '/about']
 
 let touchStartX = 0
 let touchStartY = 0
+let isTouchingInteractive = false
 
 function onTouchStart(e) {
   if (e.touches && e.touches.length === 1) {
+    const target = e.target
+    if (target && (target.closest('input') || target.closest('button') || target.closest('.md3-switch') || target.closest('.slider-row'))) {
+      isTouchingInteractive = true
+      return
+    }
+    isTouchingInteractive = false
     touchStartX = e.touches[0].clientX
     touchStartY = e.touches[0].clientY
   }
 }
 
 function onTouchEnd(e) {
+  if (isTouchingInteractive) return
   if (!e.changedTouches || e.changedTouches.length !== 1) return
 
   // Disable swipe on logs so user can scroll horizontally if needed
@@ -63,7 +71,7 @@ function onTouchEnd(e) {
   const deltaX = touchEndX - touchStartX
   const deltaY = touchEndY - touchStartY
 
-  if (Math.abs(deltaX) > Math.abs(deltaY) * 1.4 && Math.abs(deltaX) > 55) {
+  if (Math.abs(deltaX) > Math.abs(deltaY) * 1.6 && Math.abs(deltaX) > 65) {
     const currentIdx = routesOrder.indexOf(route.path)
     if (currentIdx === -1) return
 

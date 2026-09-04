@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { execCommand, readStateFile, writeStateFile } from '@/helpers/shell'
 
 export const useFpsMoonStore = defineStore('fpsmoon', () => {
@@ -10,29 +10,29 @@ export const useFpsMoonStore = defineStore('fpsmoon', () => {
     show_fps: true,
     show_cpu: true,
     show_cpu_freq: true,
-    show_gov: false,
+    show_gov: true,
     show_gpu: true,
     show_gpu_freq: true,
-    show_gpu_gov: false,
-    show_ram: false,
+    show_gpu_gov: true,
+    show_ram: true,
     show_zram: false,
     show_battery: true,
     show_net: false,
-    is_horizontal: true,
+    is_horizontal: false,
     align: 'left',
     theme: 'cyber_neon',
     custom_color: '#6366F1',
-    opacity: 0.85,
-    scale: 1.0,
-    font_size: 12,
+    opacity: 0.58,
+    scale: 0.79,
+    font_size: 11,
     corner_radius: 14,
-    bg_width: 250,
-    bg_height: 56,
-    refresh_interval: 250,
+    bg_width: 150,
+    bg_height: 160,
+    refresh_interval: 850,
     target_fps: 60
   })
 
-  const position = ref({ x: 60, y: 250 })
+  const position = ref({ x: 565, y: 156 })
 
   const stats = ref({
     fps: '--',
@@ -79,6 +79,8 @@ export const useFpsMoonStore = defineStore('fpsmoon', () => {
   let saveDebounceTimer = null
   let statsPollingTimer = null
   let isFetchingStats = false
+  let isSavingConfig = false
+  let hasPendingSave = false
 
   async function loadConfig() {
     const data = await readStateFile('config.json')
@@ -90,24 +92,37 @@ export const useFpsMoonStore = defineStore('fpsmoon', () => {
   async function loadPosition() {
     const pos = await readStateFile('position.json')
     if (pos && typeof pos === 'object' && pos.x !== undefined && pos.y !== undefined) {
-      if (pos.y < 180) pos.y = 250
+      if (pos.y < 0) pos.y = 0
       position.value = pos
     }
   }
 
   async function saveConfig() {
-    await writeStateFile('config.json', config.value)
+    if (isSavingConfig) {
+      hasPendingSave = true
+      return
+    }
+    isSavingConfig = true
+    try {
+      await writeStateFile('config.json', config.value)
+    } finally {
+      isSavingConfig = false
+      if (hasPendingSave) {
+        hasPendingSave = false
+        saveConfig()
+      }
+    }
   }
 
   function triggerInstantSave() {
     if (saveDebounceTimer) clearTimeout(saveDebounceTimer)
     saveDebounceTimer = setTimeout(() => {
       saveConfig()
-    }, 40)
+    }, 200)
   }
 
   async function savePosition() {
-    if (position.value.y < 180) position.value.y = 250
+    if (position.value.y < 0) position.value.y = 0
     await writeStateFile('position.json', position.value)
   }
 
@@ -117,13 +132,20 @@ export const useFpsMoonStore = defineStore('fpsmoon', () => {
   }
 
   function resetPosition() {
-    position.value.x = 60
-    position.value.y = 250
+    position.value.x = 565
+    position.value.y = 156
     savePosition()
   }
 
   function setOrientation(isHorizontal) {
     config.value.is_horizontal = isHorizontal
+    if (isHorizontal && config.value.bg_height > 70) {
+      config.value.bg_width = 250
+      config.value.bg_height = 56
+    } else if (!isHorizontal && config.value.bg_width > 200) {
+      config.value.bg_width = 150
+      config.value.bg_height = 160
+    }
     saveConfig()
   }
 
@@ -133,6 +155,7 @@ export const useFpsMoonStore = defineStore('fpsmoon', () => {
   }
 
   function applyPreset(type) {
+    const isHoriz = config.value.is_horizontal !== false
     if (type === 'compact') {
       config.value.show_fps = true
       config.value.show_cpu = true
@@ -144,8 +167,13 @@ export const useFpsMoonStore = defineStore('fpsmoon', () => {
       config.value.show_ram = false
       config.value.show_battery = true
       config.value.show_net = false
-      config.value.bg_width = 250
-      config.value.bg_height = 56
+      if (isHoriz) {
+        config.value.bg_width = 250
+        config.value.bg_height = 56
+      } else {
+        config.value.bg_width = 150
+        config.value.bg_height = 120
+      }
     } else if (type === 'minimal') {
       config.value.show_fps = true
       config.value.show_cpu = false
@@ -157,8 +185,13 @@ export const useFpsMoonStore = defineStore('fpsmoon', () => {
       config.value.show_ram = false
       config.value.show_battery = false
       config.value.show_net = false
-      config.value.bg_width = 180
-      config.value.bg_height = 42
+      if (isHoriz) {
+        config.value.bg_width = 180
+        config.value.bg_height = 42
+      } else {
+        config.value.bg_width = 130
+        config.value.bg_height = 70
+      }
     } else if (type === 'detailed') {
       config.value.show_fps = true
       config.value.show_cpu = true
@@ -170,8 +203,13 @@ export const useFpsMoonStore = defineStore('fpsmoon', () => {
       config.value.show_ram = true
       config.value.show_battery = true
       config.value.show_net = true
-      config.value.bg_width = 320
-      config.value.bg_height = 68
+      if (isHoriz) {
+        config.value.bg_width = 320
+        config.value.bg_height = 68
+      } else {
+        config.value.bg_width = 150
+        config.value.bg_height = 160
+      }
     }
     saveConfig()
   }
@@ -192,11 +230,11 @@ export const useFpsMoonStore = defineStore('fpsmoon', () => {
 
   async function checkProcesses() {
     try {
-      const dPid = await execCommand('pgrep -f "fpsmoon_daemon" 2>/dev/null')
-      daemonPid.value = dPid ? dPid.trim().split('\n')[0] : ''
+      const dPid = await execCommand('pidof fpsmoon_daemon 2>/dev/null || pgrep -x fpsmoon_daemon 2>/dev/null')
+      daemonPid.value = dPid ? dPid.trim().split(' ')[0] : ''
       daemonRunning.value = !!daemonPid.value
 
-      const oPid = await execCommand('pgrep -f "com.fpsmoon.FPSMoonOverlay" 2>/dev/null')
+      const oPid = await execCommand('pgrep -f com.fpsmoon.FPSMoonOverlay 2>/dev/null')
       overlayPid.value = oPid ? oPid.trim().split('\n')[0] : ''
       overlayRunning.value = !!overlayPid.value
     } catch (e) {}
@@ -204,15 +242,15 @@ export const useFpsMoonStore = defineStore('fpsmoon', () => {
 
   async function restartService() {
     try {
-      await execCommand('sh /data/adb/modules/fps_moon/action.sh >/dev/null 2>&1 || /data/adb/modules/fps_moon/action.sh >/dev/null 2>&1')
+      await execCommand('sh /data/adb/modules/fps_moon/action.sh >/dev/null 2>&1')
       await checkProcesses()
     } catch (e) {}
   }
 
   async function loadLogs() {
     try {
-      const out = await execCommand('tail -n 120 /data/adb/modules/fps_moon/state/daemon.log 2>/dev/null; echo "--- Overlay Log ---"; tail -n 120 /data/adb/modules/fps_moon/state/overlay.log 2>/dev/null')
-      logs.value = out || 'No logs recorded yet. Start or restart FPS Moon to begin streaming logs.'
+      const out = await execCommand('tail -n 60 /data/adb/modules/fps_moon/state/daemon.log 2>/dev/null; echo "\n--- Overlay Log ---"; tail -n 60 /data/adb/modules/fps_moon/state/overlay.log 2>/dev/null')
+      logs.value = out || 'No logs recorded.'
     } catch (e) {
       logs.value = 'Failed to load logs.'
     }
@@ -244,11 +282,9 @@ export const useFpsMoonStore = defineStore('fpsmoon', () => {
   function startPolling() {
     if (statsPollingTimer) return
     fetchStats()
-    checkProcesses()
     statsPollingTimer = setInterval(() => {
       fetchStats()
-      checkProcesses()
-    }, 600)
+    }, 1200)
   }
 
   function stopPolling() {

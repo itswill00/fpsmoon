@@ -4,7 +4,7 @@
     <div class="page-header">
       <div>
         <div class="page-header-title">About</div>
-        <div class="page-header-sub">System &amp; Engine Overview</div>
+        <div class="page-header-sub">Device and module information</div>
       </div>
     </div>
 
@@ -14,15 +14,15 @@
       <div class="about-hero-card">
         <div class="hero-top-row">
           <div class="tag-pill">
-            <span>Pure Android WM</span>
+            <span>Window Manager</span>
           </div>
-          <span class="badge-pill purple">{{ store.moduleVersion }} · Stable</span>
+          <span class="badge-pill">{{ store.moduleVersion }} · Stable</span>
         </div>
 
         <div class="hero-center">
           <div class="hero-app-title">FPS Moon</div>
           <div class="hero-app-desc">
-            Ultra-low latency real-time performance HUD &amp; telemetry overlay
+            Lightweight real-time performance monitor and screen overlay
           </div>
           <div class="hero-author-line">
             <span>Crafted with precision by</span>
@@ -32,22 +32,22 @@
           </div>
         </div>
 
-        <!-- Engine Specs Chips -->
+        <!-- Spec Chips -->
         <div class="about-chips-grid">
           <div class="spec-chip">
-            <span class="spec-label">Engine</span>
+            <span class="spec-label">Rendering</span>
             <span class="spec-val">Skia CPU Canvas</span>
           </div>
           <div class="spec-chip">
-            <span class="spec-label">Leash</span>
-            <span class="spec-val">Pure Java WM</span>
+            <span class="spec-label">Architecture</span>
+            <span class="spec-val">Pure Window Manager</span>
           </div>
           <div class="spec-chip">
-            <span class="spec-label">Telemetry</span>
-            <span class="spec-val">C-Daemon (Zero-OOM)</span>
+            <span class="spec-label">Service</span>
+            <span class="spec-val">Root C Daemon</span>
           </div>
           <div class="spec-chip">
-            <span class="spec-label">Platform</span>
+            <span class="spec-label">Compatibility</span>
             <span class="spec-val">AOSP &amp; HyperOS</span>
           </div>
         </div>
@@ -75,8 +75,8 @@
               <Icons name="shield" :size="18" />
             </div>
             <div class="row-meta">
-              <div class="row-title">Android System</div>
-              <div class="row-sub">Operating System Version</div>
+              <div class="row-title">Operating System</div>
+              <div class="row-sub">Platform version</div>
             </div>
           </div>
           <span class="row-val">{{ store.deviceInfo.androidVer || 'Android' }}</span>
@@ -102,27 +102,27 @@
             </div>
             <div class="row-meta">
               <div class="row-title">Display Refresh Rate</div>
-              <div class="row-sub">Hardware screen Hz</div>
+              <div class="row-sub">Hardware screen refresh</div>
             </div>
           </div>
           <span class="row-val">{{ store.stats.screen_hz ? store.stats.screen_hz + ' Hz' : '60 Hz' }}</span>
         </div>
       </div>
 
-      <!-- Release Notes (Expandable Changelog) -->
+      <!-- Release Notes -->
       <div class="section-title">Release Notes</div>
       <div class="md3-list-group">
         <div class="changelog-card">
           <div class="release-header">
             <div class="release-ver">v1.0.1 (Latest)</div>
-            <span class="badge-pill green">Active</span>
+            <span class="badge-pill">Current</span>
           </div>
           <ul class="changelog-list">
-            <li><strong>Universal AOSP &amp; Custom ROM Support</strong>: Added native Typeface reflection fallback to resolve Minikin SIGABRT crashes on vanilla Android 13/14+.</li>
-            <li><strong>libbinder Thread Pool Initializer</strong>: Added `BinderInternal.joinThreadPool()` to resolve WindowManager leash initialization timeouts.</li>
-            <li><strong>Skia CPU Software Rendering</strong>: Bypassed SELinux GPU device node restrictions on rooted AOSP builds.</li>
-            <li><strong>Dynamic AppOps Escalation</strong>: Automatic grant of `SYSTEM_ALERT_WINDOW` across UID 0, 1000, 2000, root, and shell.</li>
-            <li><strong>Vue 3 Modern WebUI</strong>: Complete overhaul to single-file Vue 3 architecture matching HyperCore standards.</li>
+            <li><strong>Universal AOSP Support</strong>: Resolved custom ROM overlay crashes using native Typeface reflection fallbacks.</li>
+            <li><strong>Thread Pool Initialization</strong>: Enabled binder worker threads to prevent window leash timeouts.</li>
+            <li><strong>Software Canvas Rendering</strong>: Switched to Skia CPU rasterization to bypass SELinux GPU restrictions.</li>
+            <li><strong>Permission Management</strong>: Dynamic overlay window escalation across root and shell environments.</li>
+            <li><strong>Modern Web Interface</strong>: High performance single-file Vue 3 user interface with instant controls.</li>
           </ul>
         </div>
       </div>
@@ -172,11 +172,11 @@ onMounted(() => {
 .tag-pill {
   font-size: 10.5px;
   font-weight: 600;
-  color: var(--primary);
-  background: var(--primary-container);
+  color: var(--on-surface);
+  background: var(--surface-container-high);
   padding: 3px 9px;
   border-radius: 10px;
-  border: 1px solid rgba(167, 139, 250, 0.25);
+  border: 1px solid var(--outline-variant);
 }
 
 .hero-center {
@@ -208,13 +208,9 @@ onMounted(() => {
 }
 
 .author-link {
-  color: var(--primary);
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.author-link:active {
+  color: var(--on-surface);
   text-decoration: underline;
+  font-weight: 600;
 }
 
 .about-chips-grid {
@@ -282,7 +278,7 @@ onMounted(() => {
   text-align: center;
   font-size: 11px;
   color: var(--on-surface-variant);
-  opacity: 0.6;
+  opacity: 0.5;
   padding: 16px 0 10px 0;
 }
 </style>

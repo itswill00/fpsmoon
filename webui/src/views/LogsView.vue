@@ -4,10 +4,10 @@
     <div class="page-header">
       <div>
         <div class="page-header-title">Activity Log</div>
-        <div class="page-header-sub">Daemon &amp; Overlay Diagnostics</div>
+        <div class="page-header-sub">Service status and console output</div>
       </div>
       <div class="menu-container" @click.stop>
-        <button class="btn-icon" @click="menuOpen = !menuOpen" title="Log options">
+        <button class="btn-icon" @click="menuOpen = !menuOpen" title="Options">
           <Icons name="more-vertical" :size="18" />
         </button>
 
@@ -15,16 +15,16 @@
           <div v-if="menuOpen" class="dropdown-menu">
             <button class="menu-item" @click="handleCopyLogs">
               <Icons name="copy" :size="14" />
-              <span>Copy All Logs</span>
+              <span>Copy log</span>
             </button>
             <button class="menu-item" @click="handleRestartService">
               <Icons name="refresh" :size="14" />
-              <span>Restart Service</span>
+              <span>Restart service</span>
             </button>
             <div class="menu-divider"></div>
             <button class="menu-item danger" @click="handleClearLogs">
               <Icons name="trash" :size="14" />
-              <span>Clear Log</span>
+              <span>Clear log</span>
             </button>
           </div>
         </Transition>
@@ -36,32 +36,32 @@
       <!-- Service Diagnostic Status Cards -->
       <div class="stat-grid-2" style="margin-bottom: 12px;">
         <div class="stat-box">
-          <span class="stat-label">C Telemetry Daemon</span>
-          <span class="stat-val" :style="{ color: store.daemonRunning ? 'var(--green)' : 'var(--on-surface-variant)' }">
-            {{ store.daemonRunning ? `PID ${store.daemonPid}` : 'Standby' }}
+          <span class="stat-label">Background service</span>
+          <span class="stat-val">
+            {{ store.daemonRunning ? `Active (PID ${store.daemonPid})` : 'Standby' }}
           </span>
-          <span class="stat-sub">{{ store.daemonRunning ? 'Active (/data/adb/modules/fps_moon)' : 'Stopped' }}</span>
+          <span class="stat-sub">{{ store.daemonRunning ? 'Running' : 'Stopped' }}</span>
         </div>
         <div class="stat-box">
-          <span class="stat-label">Java Window Overlay</span>
-          <span class="stat-val" :style="{ color: store.overlayRunning ? 'var(--green)' : 'var(--on-surface-variant)' }">
-            {{ store.overlayRunning ? `PID ${store.overlayPid}` : 'Standby' }}
+          <span class="stat-label">Screen overlay</span>
+          <span class="stat-val">
+            {{ store.overlayRunning ? `Active (PID ${store.overlayPid})` : 'Standby' }}
           </span>
-          <span class="stat-sub">{{ store.overlayRunning ? 'app_process active' : 'Stopped' }}</span>
+          <span class="stat-sub">{{ store.overlayRunning ? 'Running' : 'Stopped' }}</span>
         </div>
       </div>
 
       <!-- Terminal Log Viewport -->
       <div class="terminal-container">
         <div class="terminal-bar">
-          <div class="terminal-title">Console Output</div>
+          <div class="terminal-title">Console</div>
           <button class="refresh-btn" @click="fetchLogs">
             <Icons name="refresh" :size="13" />
             <span>Refresh</span>
           </button>
         </div>
         <div ref="terminalBody" class="terminal-body">
-          <pre class="terminal-text">{{ store.logs || 'Loading logs...' }}</pre>
+          <pre class="terminal-text">{{ store.logs || 'No recent log messages.' }}</pre>
         </div>
       </div>
     </div>
@@ -92,7 +92,7 @@ async function handleCopyLogs() {
   try {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       await navigator.clipboard.writeText(store.logs)
-      toast('Logs copied to clipboard')
+      toast('Log copied to clipboard')
     } else {
       const el = document.createElement('textarea')
       el.value = store.logs
@@ -100,10 +100,10 @@ async function handleCopyLogs() {
       el.select()
       document.execCommand('copy')
       document.body.removeChild(el)
-      toast('Logs copied to clipboard')
+      toast('Log copied to clipboard')
     }
   } catch (e) {
-    toast('Failed to copy logs')
+    toast('Failed to copy log')
   }
 }
 
@@ -118,7 +118,7 @@ async function handleRestartService() {
 async function handleClearLogs() {
   menuOpen.value = false
   await store.clearLogs()
-  toast('Logs cleared')
+  toast('Log cleared')
 }
 
 onMounted(() => {
@@ -154,7 +154,7 @@ onMounted(() => {
   position: absolute;
   top: 42px;
   right: 0;
-  width: 170px;
+  width: 160px;
   background: var(--surface-container-high);
   border: 1px solid var(--surface-bright);
   border-radius: 14px;
@@ -174,7 +174,7 @@ onMounted(() => {
 .menu-pop-enter-from,
 .menu-pop-leave-to {
   opacity: 0;
-  transform: scale(0.92) translateY(-6px);
+  transform: scale(0.94) translateY(-4px);
 }
 
 .menu-item {
@@ -231,8 +231,9 @@ onMounted(() => {
 }
 
 .stat-val {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
+  color: var(--on-surface);
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
 }
@@ -267,7 +268,6 @@ onMounted(() => {
   font-size: 11px;
   font-weight: 600;
   color: var(--on-surface-variant);
-  letter-spacing: 0.2px;
 }
 
 .refresh-btn {
@@ -296,12 +296,13 @@ onMounted(() => {
   font-family: var(--font-mono);
   font-size: 11px;
   line-height: 1.45;
-  color: #cbd5e1;
+  color: var(--on-surface-variant);
 }
 
 .terminal-text {
   white-space: pre-wrap;
   word-break: break-all;
   font-family: var(--font-mono);
+  color: #cbd5e1;
 }
 </style>

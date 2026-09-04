@@ -59,23 +59,23 @@ clang -O3 -Wall -Wextra \
 chmod 755 bin/fpsmoon_daemon
 
 # Compile Java overlay if toolchain is available
-ANDROID_JAR="/data/data/com.termux/files/home/android-sdk/android.jar"
+ANDROID_JAR="/data/data/com.termux/files/usr/share/java/android.jar"
 if [ ! -f "$ANDROID_JAR" ]; then
-    ANDROID_JAR=$(find /data/data/com.termux/files/home -name "android.jar" 2>/dev/null | head -n 1)
+    ANDROID_JAR=$(find /data/data/com.termux/files/ -name "android.jar" 2>/dev/null | head -n 1)
 fi
 
-if [ -n "$ANDROID_JAR" ] && command -v ecj >/dev/null 2>&1 && (command -v dx >/dev/null 2>&1 || command -v d8 >/dev/null 2>&1); then
+if [ -n "$ANDROID_JAR" ] && [ -f "$ANDROID_JAR" ] && command -v ecj >/dev/null 2>&1 && (command -v dx >/dev/null 2>&1 || command -v d8 >/dev/null 2>&1); then
     echo "compiling java overlay..."
-    rm -rf /tmp/fpsmoon_build
-    mkdir -p /tmp/fpsmoon_build/classes
-    ecj -7 -cp "$ANDROID_JAR" -d /tmp/fpsmoon_build/classes src/FPSMoonOverlay.java
+    rm -rf build/classes
+    mkdir -p build/classes
+    ecj -cp "$ANDROID_JAR" -d build/classes src/FPSMoonOverlay.java
     if command -v dx >/dev/null 2>&1; then
-        dx --dex --output=bin/fpsmoon.dex /tmp/fpsmoon_build/classes
+        dx --dex --output=bin/fpsmoon.dex build/classes
     elif command -v d8 >/dev/null 2>&1; then
-        d8 --output bin/ /tmp/fpsmoon_build/classes/com/fpsmoon/FPSMoonOverlay*.class
+        d8 --output bin/ build/classes/com/fpsmoon/FPSMoonOverlay*.class
         mv bin/classes.dex bin/fpsmoon.dex
     fi
-    rm -rf /tmp/fpsmoon_build
+    rm -rf build/classes
     echo "compiled bin/fpsmoon.dex successfully"
 fi
 chmod 644 bin/fpsmoon.dex
@@ -109,9 +109,10 @@ if [ "$1" = "--deploy" ] || [ "$1" = "-d" ]; then
     echo "deploying to live device modules..."
     MOD_TARGET="/data/adb/modules/fps_moon"
     if su -c "[ -d $MOD_TARGET ]"; then
+        su -c "killall -9 fpsmoon_daemon 2>/dev/null || pkill -9 -x fpsmoon_daemon 2>/dev/null || true"
         su -c "mkdir -p $MOD_TARGET/bin $MOD_TARGET/webroot $MOD_TARGET/state"
-        su -c "cp $PROJECT_DIR/bin/fpsmoon_daemon $MOD_TARGET/bin/fpsmoon_daemon"
-        su -c "cp $PROJECT_DIR/bin/fpsmoon.dex $MOD_TARGET/bin/fpsmoon.dex"
+        su -c "rm -f $MOD_TARGET/bin/fpsmoon_daemon && cp $PROJECT_DIR/bin/fpsmoon_daemon $MOD_TARGET/bin/fpsmoon_daemon"
+        su -c "rm -f $MOD_TARGET/bin/fpsmoon.dex && cp $PROJECT_DIR/bin/fpsmoon.dex $MOD_TARGET/bin/fpsmoon.dex"
         su -c "rm -f $MOD_TARGET/webroot/app.js $MOD_TARGET/webroot/styles.css"
         su -c "cp $PROJECT_DIR/webroot/index.html $MOD_TARGET/webroot/index.html"
         su -c "cp $PROJECT_DIR/module.prop $MOD_TARGET/module.prop"
