@@ -8,8 +8,10 @@ import android.graphics.PixelFormat;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.hardware.display.DisplayManager;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Process;
 import android.util.DisplayMetrics;
 import android.view.Display;
 import android.view.Gravity;
@@ -331,12 +333,51 @@ public class FPSMoonOverlay {
         try {
             Looper.prepareMainLooper();
 
+            // 1. Initialize System Font Map and set Default Typeface natively (prevents AOSP / minikin SIGABRT)
             try {
                 Method fontMapMethod = Typeface.class.getDeclaredMethod("loadPreinstalledSystemFontMap");
                 fontMapMethod.setAccessible(true);
                 fontMapMethod.invoke(null);
             } catch (Throwable ignored) {}
 
+            try {
+                Method getMapMethod = Typeface.class.getDeclaredMethod("getSystemFontMap");
+                getMapMethod.setAccessible(true);
+                Map<?, ?> map = (Map<?, ?>) getMapMethod.invoke(null);
+                if (map != null) {
+                    Object sansSerif = map.get("sans-serif");
+                    if (sansSerif instanceof Typeface) {
+                        Method setDef = Typeface.class.getDeclaredMethod("setDefault", Typeface.class);
+                        setDef.setAccessible(true);
+                        setDef.invoke(null, (Typeface) sansSerif);
+                    }
+                }
+            } catch (Throwable ignored) {}
+
+            // 2. Initialize libbinder Worker Thread Pool for system_server IPC callbacks (prevents AOSP WM leash timeouts)
+            try {
+                Class<?> binderInternal = Class.forName("com.android.internal.os.BinderInternal");
+                try {
+                    Method disableBg = binderInternal.getMethod("disableBackgroundScheduling", boolean.class);
+                    disableBg.invoke(null, true);
+                } catch (Throwable ignored) {}
+
+                try {
+                    final Method joinThreadPool = binderInternal.getMethod("joinThreadPool");
+                    Thread binderThread = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                joinThreadPool.invoke(null);
+                            } catch (Throwable ignored) {}
+                        }
+                    }, "FPSMoon-BinderPool");
+                    binderThread.setDaemon(true);
+                    binderThread.start();
+                } catch (Throwable ignored) {}
+            } catch (Throwable ignored) {}
+
+            // 3. Acquire System Context via ActivityThread
             Context sysContext = null;
             try {
                 Class<?> activityThreadClass = Class.forName("android.app.ActivityThread");
@@ -352,12 +393,35 @@ public class FPSMoonOverlay {
                 return;
             }
 
-            context = sysContext; // Primary context fallback
+            // 4. Dynamically Grant AppOps SYSTEM_ALERT_WINDOW across UIDs (root=0, system=1000, shell=2000)
+            try {
+                Class<?> appOpsClass = Class.forName("android.app.AppOpsManager");
+                Object appOps = sysContext.getSystemService(Context.APP_OPS_SERVICE);
+                if (appOps != null) {
+                    Method setUidModeMethod = null;
+                    for (Method m : appOpsClass.getDeclaredMethods()) {
+                        if ("setUidMode".equals(m.getName()) && m.getParameterTypes().length >= 3) {
+                            setUidModeMethod = m;
+                            break;
+                        }
+                    }
+                    if (setUidModeMethod != null) {
+                        setUidModeMethod.setAccessible(true);
+                        int myUid = Process.myUid();
+                        setUidModeMethod.invoke(appOps, 24 /* OP_SYSTEM_ALERT_WINDOW */, myUid, 0 /* MODE_ALLOWED */);
+                        setUidModeMethod.invoke(appOps, 24, 1000, 0);
+                        setUidModeMethod.invoke(appOps, 24, 2000, 0);
+                    }
+                }
+            } catch (Throwable ignored) {}
 
+            // 5. Multi-tiered Context Resolution: WindowContext (API 30+) -> DisplayContext -> SystemContext
+            context = sysContext; // Primary fallback
+            Display defaultDisplay = null;
             try {
                 DisplayManager dm = (DisplayManager) sysContext.getSystemService(Context.DISPLAY_SERVICE);
                 if (dm != null) {
-                    Display defaultDisplay = dm.getDisplay(Display.DEFAULT_DISPLAY);
+                    defaultDisplay = dm.getDisplay(Display.DEFAULT_DISPLAY);
                     if (defaultDisplay != null) {
                         Context displayCtx = sysContext.createDisplayContext(defaultDisplay);
                         if (displayCtx != null) {
@@ -369,13 +433,30 @@ public class FPSMoonOverlay {
                 System.err.println("[FPS Moon Warning] DisplayContext fallback: " + t.getMessage());
             }
 
+            if (Build.VERSION.SDK_INT >= 30) {
+                try {
+                    Method createWindowContextMethod = null;
+                    try {
+                        createWindowContextMethod = Context.class.getMethod("createWindowContext", Display.class, int.class, android.os.Bundle.class);
+                        Context winCtx = (Context) createWindowContextMethod.invoke(sysContext, defaultDisplay, 2038, null);
+                        if (winCtx != null) context = winCtx;
+                    } catch (NoSuchMethodException e) {
+                        createWindowContextMethod = Context.class.getMethod("createWindowContext", int.class, android.os.Bundle.class);
+                        Context winCtx = (Context) createWindowContextMethod.invoke(context, 2038, null);
+                        if (winCtx != null) context = winCtx;
+                    }
+                } catch (Throwable t) {
+                    System.err.println("[FPS Moon Warning] WindowContext fallback: " + t.getMessage());
+                }
+            }
+
             try {
                 windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
             } catch (Throwable t) {
                 System.err.println("[FPS Moon Warning] Context WINDOW_SERVICE: " + t.getMessage());
             }
 
-            if (windowManager == null) {
+            if (windowManager == null && sysContext != null) {
                 try {
                     windowManager = (WindowManager) sysContext.getSystemService(Context.WINDOW_SERVICE);
                 } catch (Throwable ignored) {}
@@ -510,13 +591,20 @@ public class FPSMoonOverlay {
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                         | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                         | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-                        | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-                        | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+                        | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                 PixelFormat.TRANSLUCENT
         );
         params.gravity = Gravity.TOP | Gravity.START;
         params.x = posX;
         params.y = posY;
+        params.setTitle("FPSMoonOverlay");
+        params.packageName = "android";
+
+        // Enable full-screen rendering across display cutouts & notches on AOSP
+        try {
+            java.lang.reflect.Field cutoutField = WindowManager.LayoutParams.class.getField("layoutInDisplayCutoutMode");
+            cutoutField.setInt(params, 1); // LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+        } catch (Throwable ignored) {}
 
         hudView.setOnTouchListener(new View.OnTouchListener() {
             private int initialX, initialY;
@@ -582,19 +670,21 @@ public class FPSMoonOverlay {
             2038, // TYPE_APPLICATION_OVERLAY
             2034, // TYPE_SYSTEM_NOTIFICATION
             2032, // TYPE_ACCESSIBILITY_OVERLAY
-            2015, // TYPE_SPLIT_SCREEN_DIVIDER
-            2014, // TYPE_STATUS_BAR_PANEL
             2010, // TYPE_SYSTEM_ERROR
             2006, // TYPE_SYSTEM_OVERLAY
             2003, // TYPE_SYSTEM_ALERT
-            2002, // TYPE_PHONE
-            2000  // TYPE_BASE_APPLICATION
+            2002  // TYPE_PHONE
         };
 
         boolean attached = false;
         for (int type : windowTypes) {
             try {
                 params.type = type;
+                if (type == 2006 || type == 2015) {
+                    params.flags |= WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
+                } else {
+                    params.flags &= ~WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
+                }
                 windowManager.addView(hudView, params);
                 System.out.println("[FPS Moon] Successfully attached to WindowManager layer " + type);
                 attached = true;
@@ -606,6 +696,12 @@ public class FPSMoonOverlay {
 
         if (!attached) {
             System.err.println("[FPS Moon ERROR] Unable to attach overlay to any WindowManager layer!");
+        } else {
+            try {
+                hudView.setVisibility(View.VISIBLE);
+                hudView.requestLayout();
+                hudView.invalidate();
+            } catch (Throwable ignored) {}
         }
     }
 

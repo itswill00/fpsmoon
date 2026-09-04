@@ -2,4 +2,5 @@ build/
 state/stats.json
 state/stats.json.tmp
 state/*.log
+*.zip
 .DS_Store

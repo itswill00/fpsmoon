@@ -7,12 +7,22 @@ mkdir -p "$MODDIR/state"
 chmod 777 "$MODDIR/state"
 chcon -R u:object_r:system_file:s0 "$MODDIR/state" 2>/dev/null || true
 
-# Grant SYSTEM_ALERT_WINDOW AppOps permission across OEMs (MIUI/HyperOS/ColorOS/OneUI)
+# Grant SYSTEM_ALERT_WINDOW AppOps permission across AOSP, Custom ROMs, and OEMs
+cmd appops set --uid 0 SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
+cmd appops set --uid 1000 SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
+cmd appops set --uid 2000 SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
+appops set --uid 0 SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
+appops set --uid 1000 SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
+appops set --uid 2000 SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
+appops set 0 SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
+appops set 1000 SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
+appops set 2000 SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
+appops set root SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
+appops set android SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
+cmd appops set android SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
 appops set com.android.shell SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
 cmd appops set com.android.shell SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
 pm grant com.android.shell android.permission.SYSTEM_ALERT_WINDOW 2>/dev/null || true
-appops set android SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
-cmd appops set android SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
 
 # Kill existing instances safely
 pkill -9 -f "fpsmoon_daemon" 2>/dev/null
@@ -28,7 +38,7 @@ fi
 
 # 2. Restart Native Java Overlay Engine (detached)
 if [ -f "$MODDIR/bin/fpsmoon.dex" ]; then
-    ( CLASSPATH="$MODDIR/bin/fpsmoon.dex" app_process /system/bin com.fpsmoon.FPSMoonOverlay "$MODDIR/state" > "$MODDIR/state/overlay.log" 2>&1 & )
+    ( CLASSPATH="$MODDIR/bin/fpsmoon.dex" /system/bin/app_process /system/bin com.fpsmoon.FPSMoonOverlay "$MODDIR/state" > "$MODDIR/state/overlay.log" 2>&1 & )
 fi
 
 sleep 1

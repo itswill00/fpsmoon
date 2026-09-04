@@ -616,7 +616,7 @@ int main() {
             if (system("pgrep -f com.fpsmoon.FPSMoonOverlay >/dev/null 2>&1") != 0) {
                 char respawn_cmd[1024];
                 snprintf(respawn_cmd, sizeof(respawn_cmd),
-                         "( CLASSPATH=\"%s/../bin/fpsmoon.dex\" app_process /system/bin com.fpsmoon.FPSMoonOverlay \"%s\" > \"%s/overlay.log\" 2>&1 & )",
+                         "( CLASSPATH=\"%s/../bin/fpsmoon.dex\" /system/bin/app_process /system/bin com.fpsmoon.FPSMoonOverlay \"%s\" > \"%s/overlay.log\" 2>&1 & )",
                          state_dir, state_dir, state_dir);
                 system(respawn_cmd);
             }

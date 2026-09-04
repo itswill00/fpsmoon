@@ -86,9 +86,9 @@ fpsmoon/
 
 ## Installation
 
-1. Download the latest `FPSMoon-v1.0.0.zip` from the Releases section.
+1. Download the latest `FPSMoon-v1.0.1.zip` from the Releases section.
 2. Open **Magisk**, **KernelSU**, or **APatch**.
-3. Tap **Install from Storage** and select `FPSMoon-v1.0.0.zip`.
+3. Tap **Install from Storage** and select `FPSMoon-v1.0.1.zip`.
 4. Reboot your device.
 
 To manually restart the overlay services at any time, run this command in a root terminal:
@@ -123,7 +123,7 @@ su -c /data/adb/modules/fps_moon/action.sh
 
 3. Create the module zip:
    ```bash
-   zip -r FPSMoon-v1.0.0.zip action.sh customize.sh module.prop service.sh uninstall.sh bin webroot
+   zip -r FPSMoon-v1.0.1.zip action.sh customize.sh module.prop service.sh uninstall.sh bin webroot
    ```
 
 ---

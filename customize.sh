@@ -46,4 +46,11 @@ chmod 755 "$MODPATH/service.sh"
 chmod 755 "$MODPATH/action.sh"
 chmod 755 "$MODPATH/uninstall.sh"
 
+# Pre-grant overlay permissions for AOSP and custom ROMs
+cmd appops set --uid 0 SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
+cmd appops set --uid 1000 SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
+cmd appops set --uid 2000 SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
+appops set android SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
+appops set com.android.shell SYSTEM_ALERT_WINDOW allow 2>/dev/null || true
+
 ui_print "FPS Moon installed successfully."
