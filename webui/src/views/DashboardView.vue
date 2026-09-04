@@ -1,0 +1,385 @@
+<template>
+  <div style="height: 100%; display: flex; flex-direction: column;">
+    <!-- Page Header -->
+    <div class="page-header">
+      <div>
+        <div class="page-header-title">Dashboard</div>
+        <div class="page-header-sub">Performance &amp; Overlay Overview</div>
+      </div>
+      <span class="badge-pill purple">{{ store.moduleVersion }}</span>
+    </div>
+
+    <!-- Scrollable Content Area -->
+    <div class="content-area">
+      <!-- App Hero Banner -->
+      <div class="hero-banner">
+        <div class="banner-top-row">
+          <div class="app-banner-icon">
+            <Icons name="moon" :size="22" />
+          </div>
+          <div class="banner-title-group">
+            <div class="banner-title-line">
+              <span class="app-banner-title">FPS Moon</span>
+              <span :class="['badge-pill', store.config.visible ? 'green' : 'purple']">
+                {{ store.config.visible ? 'Active' : 'Disabled' }}
+              </span>
+            </div>
+            <div class="app-banner-sub">Performance overlay by @itswill00</div>
+          </div>
+        </div>
+
+        <!-- Live Stat Chips -->
+        <div class="banner-stats-row">
+          <div class="banner-chip">
+            <span>FPS: <strong>{{ store.stats.fps || '--' }}</strong></span>
+          </div>
+          <div class="banner-chip">
+            <span>CPU: <strong>{{ store.stats.cpu_load ? store.stats.cpu_load + '%' : '--' }}</strong></span>
+          </div>
+          <div class="banner-chip">
+            <span>GPU: <strong>{{ store.stats.gpu_load ? store.stats.gpu_load + '%' : '--' }}</strong></span>
+          </div>
+          <div class="banner-chip">
+            <span>Power: <strong>{{ store.stats.bat_watt ? store.stats.bat_watt + 'W' : '--' }}</strong></span>
+          </div>
+        </div>
+
+        <!-- Quick Actions Row -->
+        <div class="quick-actions-row">
+          <button class="quick-act-btn" @click="handleToggle">
+            <Icons name="power" :size="14" />
+            <span>Toggle overlay</span>
+          </button>
+          <button class="quick-act-btn" @click="handleReset">
+            <Icons name="reset" :size="14" />
+            <span>Reset position</span>
+          </button>
+          <button class="quick-act-btn" @click="handleRestart">
+            <Icons name="refresh" :size="14" />
+            <span>Restart service</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Master Overlay Toggle -->
+      <div class="md3-list-group">
+        <div class="md3-list-row clickable" @click="handleToggle">
+          <div class="row-left">
+            <div class="icon-badge">
+              <Icons name="screen" :size="18" />
+            </div>
+            <div class="row-meta">
+              <div class="row-title">Enable overlay</div>
+              <div class="row-sub">Show performance overlay on screen</div>
+            </div>
+          </div>
+          <label class="md3-switch" @click.stop>
+            <input
+              type="checkbox"
+              v-model="store.config.visible"
+              @change="onConfigChange('Overlay ' + (store.config.visible ? 'enabled' : 'disabled'))"
+            />
+            <span class="md3-switch-track">
+              <span class="md3-switch-thumb"></span>
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Current Stats Grid -->
+      <div class="section-title">Current stats</div>
+      <div class="stat-grid-2">
+        <div class="stat-box">
+          <span class="stat-label">Frame rate</span>
+          <span class="stat-val">{{ store.stats.fps !== '--' ? store.stats.fps + ' FPS' : '--' }}</span>
+          <span class="stat-sub">{{ store.stats.frametime !== '--' ? store.stats.frametime + ' ms' : '--' }}</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Processor</span>
+          <span class="stat-val">{{ store.stats.cpu_load !== '--' ? store.stats.cpu_load + '%' : '--' }}</span>
+          <span class="stat-sub">{{ (store.stats.cpu_freq || '--') + ' | ' + (store.stats.cpu_temp || '--') + '°C' }}</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Graphics</span>
+          <span class="stat-val">{{ store.stats.gpu_load !== '--' ? store.stats.gpu_load + '%' : '--' }}</span>
+          <span class="stat-sub">{{ (store.stats.gpu_freq || '--') + ' | ' + (store.stats.gpu_temp || '--') + '°C' }}</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">Battery power</span>
+          <span class="stat-val">{{ store.stats.bat_watt !== '--' ? store.stats.bat_watt + ' W' : '--' }}</span>
+          <span class="stat-sub">{{ store.stats.bat_temp ? 'Battery: ' + store.stats.bat_temp + '°C' : '--' }}</span>
+        </div>
+      </div>
+
+      <!-- Layout Style & Orientation -->
+      <div class="section-title">Layout style</div>
+      <div class="segmented-bar">
+        <button
+          class="segmented-btn"
+          :class="{ active: store.config.is_horizontal !== false }"
+          @click="changeOrientation(true)"
+        >
+          Horizontal pill
+        </button>
+        <button
+          class="segmented-btn"
+          :class="{ active: store.config.is_horizontal === false }"
+          @click="changeOrientation(false)"
+        >
+          Vertical stack
+        </button>
+      </div>
+
+      <!-- Alignment Controls -->
+      <div class="segmented-bar">
+        <button
+          class="segmented-btn"
+          :class="{ active: store.config.align === 'left' }"
+          @click="changeAlignment('left')"
+        >
+          Left align
+        </button>
+        <button
+          class="segmented-btn"
+          :class="{ active: store.config.align === 'center' }"
+          @click="changeAlignment('center')"
+        >
+          Center align
+        </button>
+        <button
+          class="segmented-btn"
+          :class="{ active: store.config.align === 'right' }"
+          @click="changeAlignment('right')"
+        >
+          Right align
+        </button>
+      </div>
+
+      <!-- Layout Presets -->
+      <div class="section-title">Presets</div>
+      <div class="segmented-bar">
+        <button
+          class="segmented-btn"
+          :class="{ active: activePreset === 'compact' }"
+          @click="changePreset('compact')"
+        >
+          Compact
+        </button>
+        <button
+          class="segmented-btn"
+          :class="{ active: activePreset === 'minimal' }"
+          @click="changePreset('minimal')"
+        >
+          Minimal
+        </button>
+        <button
+          class="segmented-btn"
+          :class="{ active: activePreset === 'detailed' }"
+          @click="changePreset('detailed')"
+        >
+          Detailed
+        </button>
+      </div>
+
+      <!-- Footer Branding -->
+      <div class="footer-note">
+        FPS Moon • Developed by <strong>@itswill00</strong>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, inject } from 'vue'
+import { useFpsMoonStore } from '@/stores/fpsmoon'
+import Icons from '@/components/icons/Icons.vue'
+
+const store = useFpsMoonStore()
+const toast = inject('toast')
+const activePreset = ref('compact')
+
+function handleToggle() {
+  store.toggleOverlay()
+  toast(store.config.visible ? 'Overlay enabled' : 'Overlay disabled')
+}
+
+function handleReset() {
+  store.resetPosition()
+  toast('Position reset to default')
+}
+
+async function handleRestart() {
+  toast('Restarting FPS Moon services...')
+  await store.restartService()
+  toast('Services restarted successfully')
+}
+
+function onConfigChange(msg) {
+  store.saveConfig()
+  if (msg) toast(msg)
+}
+
+function changeOrientation(val) {
+  store.setOrientation(val)
+  toast(val ? 'Horizontal pill layout' : 'Vertical stack layout')
+}
+
+function changeAlignment(align) {
+  store.setAlignment(align)
+  toast(`Alignment set to ${align}`)
+}
+
+function changePreset(type) {
+  activePreset.value = type
+  store.applyPreset(type)
+  const label = type.charAt(0).toUpperCase() + type.slice(1)
+  toast(`Applied ${label} preset`)
+}
+</script>
+
+<style scoped>
+.hero-banner {
+  background: var(--surface-container);
+  border: 1px solid var(--surface-container-high);
+  border-radius: 18px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.banner-top-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.app-banner-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--primary-container);
+  border: 1px solid rgba(167, 139, 250, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.banner-title-group {
+  min-width: 0;
+  flex: 1;
+}
+
+.banner-title-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-banner-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--on-surface);
+}
+
+.app-banner-sub {
+  font-size: 11.5px;
+  color: var(--on-surface-variant);
+  margin-top: 2px;
+}
+
+.banner-stats-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.banner-chip {
+  background: var(--surface-container-low);
+  border: 1px solid var(--outline-variant);
+  padding: 4px 10px;
+  border-radius: 9px;
+  font-size: 11px;
+  color: var(--on-surface-variant);
+}
+
+.banner-chip strong {
+  color: var(--on-surface);
+  font-variant-numeric: tabular-nums;
+}
+
+.quick-actions-row {
+  display: flex;
+  gap: 8px;
+}
+
+.quick-act-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline-variant);
+  border-radius: 10px;
+  padding: 8px 10px;
+  color: var(--on-surface);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quick-act-btn:active {
+  background: var(--surface-bright);
+  transform: scale(0.96);
+}
+
+.stat-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.stat-box {
+  background: var(--surface-container);
+  border: 1px solid var(--surface-container-high);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-label {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--on-surface-variant);
+  margin-bottom: 3px;
+}
+
+.stat-val {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--on-surface);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.stat-sub {
+  font-size: 11px;
+  color: var(--on-surface-variant);
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+}
+
+.footer-note {
+  text-align: center;
+  font-size: 11px;
+  color: var(--on-surface-variant);
+  opacity: 0.6;
+  padding: 16px 0 10px 0;
+}
+</style>

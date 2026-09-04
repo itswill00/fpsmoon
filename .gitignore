@@ -4,3 +4,6 @@ state/stats.json.tmp
 state/*.log
 *.zip
 .DS_Store
+webui/dist/
+webui/node_modules
+webui/.vite/
